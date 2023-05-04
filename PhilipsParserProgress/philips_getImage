@@ -1,0 +1,54 @@
+import matlab.engine
+
+eng = matlab.engine.start_matlab()
+
+class AnalysisParams():
+    def __init__(self, frame):
+        self.frame = frame
+        self.t_tilt= 0
+        self.t_width = 70
+        self.startDepth = 0.04
+        self.endDepth = 0.16
+        self.endHeight = 500
+        self.clip_fact = 0.95
+        self.dyn_range = 55
+        self.depth = 0.16
+        self.width = 0.265
+
+class File_Struct():
+    def __init__(self, filedirectory, filename):
+        self.name = filename
+        self.directory = filedirectory
+
+
+
+def getImage(filename, filedirectory, refname, refdirectory, frame):
+    analysisParams = AnalysisParams(frame)
+    Files = File_Struct(filedirectory, filename)
+    refFiles = File_Struct(refdirectory, refname)
+    [imgInfo, refInfo, imgData, refData] = philips_getData(Files, refFiles, analysisParams)
+
+
+def philips_getData(Files, refFiles, analysisParams):
+    imgInfo = philips_readPhilipsInfo(Files.name, Files.directory)
+    # [imgData, imgInfo] = philips_read_PhilipsImg(imgInfo, analysisParams.frame)
+
+    refInfo = philips_readPhilipsInfo(refFiles.name, refFiles.directory)
+    # [refData, refInfo] = philips_readPhilipsImg(refInfo, analysisParams.frame)
+
+def philips_readPhilipsInfo(filename, filepath):
+    if filename[-4:] == ".mat":
+        hi = eng.load(str(filepath + filename))
+        
+        studyID = filename[:-4]
+        studyEXT = filename[-4:]
+
+        info = dict()
+        info["studyMode"] = "RF"
+        info["filename"] = filename
+        info["filepath"] = filepath
+
+
+
+
+philips_readPhilipsInfo("FatQuantData1.mat", "/Users/davidspector/Documents/MATLAB/Data/")

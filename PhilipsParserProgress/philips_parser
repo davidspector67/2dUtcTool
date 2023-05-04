@@ -1,0 +1,1003 @@
+import numpy as np
+import os
+from datetime import datetime
+import warnings
+from bitstring import ConstBitStream
+from textwrap import wrap
+
+
+class Parsed_result:
+    def __init__(self):
+        self.rfData = []
+        self.NumFrame = 0
+        self.pt = 0
+        self.multilinefactor = 0
+        self.NumSonoCTAngles = 0
+        self.txBeamperFrame = 0
+
+class HeaderInfo:
+    def __init__(self):
+        self.RF_CaptureVersion = 0
+        self.Tap_Point = []
+        self.Data_Gate = 0
+        self.Multilines_Capture = []
+        self.Steer = 0
+        self.elevationPlaneOffset = 0
+        self.PM_Index = 0
+        self.Pulse_Index = 0
+        self.Data_Format = 0
+        self.Data_Type = []
+        self.Header_Tag = 0
+        self.Threed_Pos = 0
+        self.Mode_Info = 0
+        self.Frame_ID = 0
+        self.CSID = 0
+        self.Line_Type = 0
+        self.Time_Stamp = 0
+        self.RF_Sample_Rate = []
+
+class dbParams:
+    def __init__(self):
+        self.acqNumActiveScChannels2d = []
+        self.azimuthMultilineFactorXbrOut = []
+        self.azimuthMultilineFactorXbrIn = []
+        self.numOfSonoCTAngles2dActual = []
+        self.elevationMultilineFactor = []
+        self.numPiPulses = []
+        self.num2DCols = []
+        self.fastPiEnabled = []
+        self.numZones2d = []
+        self.numSubVols = 0 #
+        self.numPlanes = 0 #
+        self.zigZagEnabled = 0 #
+        self.azimuthMultilineFactorXbrOutCf = []
+        self.azimuthMultilineFactorXbrInCf = []
+        self.multilLineFactorCf = []
+        self.linesPerEnsCf = []
+        self.ensPerSeqCf = []
+        self.numCfCols = []
+        self.numCfEntries = []
+        self.numCfDummies = []
+        self.elevationMultilineFactorCf = []
+        self.Planes = []
+        self.multiLineFactorCf = []
+        self.tapPoint = 0
+
+class Rfdata:
+    def __init__(self):
+        self.lineData = [] # Array containing interleaved line data (Data x XmitEvents)
+        self.lineHeader = [] # Array containing qualifier bits of the interleaved line data (Qualifiers x XmitEvents)
+        self.headerInfo = HeaderInfo() # Structure containing information from the headers
+        self.echoData = [] # Array containing echo line data
+        self.dbParams = dbParams() # Structure containing dbParameters. Should match feclib::RFCaptureDBInfo
+        self.echoData1 = []
+        self.echoData2 = []
+        self.echoData3 = []
+        self.echoMModeData = []
+
+def pruneData(lineData, lineHeader, ML_Capture):
+
+    # Remove false gate data at beginning of the line
+    numSamples = lineData.shape[0]
+    referenceLine = np.ceil(lineData.shape[1]*0.2)
+    startPoint = np.ceil(numSamples*0.015)
+    iFirstSample = np.where(lineHeader[startPoint:numSamples,referenceLine]==3)[0][0]+startPoint-1
+    if len(np.where(lineHeader[startPoint:numSamples,referenceLine]==3)) == 0:
+        iFirstSample = 1
+    
+    # Align the pruning
+    alingnment = np.arange(0,numSamples, np.double(ML_Capture))
+    diff = alignment - iFirstSample
+    iFirstSample = alignment[np.where(diff>=0)[0][0]]
+    
+    # Prune data
+    prunedData = lineData[iFirstSample:numSamples+1,:]
+    lineHeader = lineHeader[iFirstSample:numSamples+1,:]
+               
+    # Remove zero data at end of the line
+    # Start from last 1 of the line
+    numSamples = prunedData.shape[0]
+    startPoint = np.floor(numSamples*0.99)
+    iLastSample = np.where(lineHeader[startPoint:numSamples+1,referenceLine]==0)[0][0]+startPoint-1
+    if len(np.where(lineHeader[startPoint:numSamples+1,referenceLine]==0)[0]) == 0:
+        iLastSample = pruneData.shape[0]
+    else:
+        # Align the pruning
+        alignment = np.arange(0,numSamples, np.double(ML_Capture))
+        diff = alignment - iLastSample
+        iLastSample = alignment[np.where(diff >= 0)[0][0]]-1
+    if len(np.where(diff >= 0)[0]) == 0:
+        iLastSample = prunedData.shape[0]
+    
+    # Prune data
+    prunedData = prunedData[:iLastSample+1, :]
+
+    return prunedData
+
+def SortRF(RFinput, Stride, ML, CRE=1, isVoyager=True):
+
+    # Initialize default parameters
+    N = RFinput.shape[0]
+    xmitEvents = RFinput.shape[1]
+    depth = np.arange(0,ML-1,1)
+
+    # Make into Column Vecor
+    MLs = MLs[:]
+    
+    # Preallocate output array, but only for those that will be used
+    if CRE == 4:
+        out3 = np.zeros((depth, ML, xmitEvents))
+        out2 = np.zeros((depth, ML, xmitEvents))
+        out1 = np.zeros((depth, ML, xmitEvents))
+        out0 = np.zeros((depth, ML, xmitEvents))
+    elif CRE == 3:
+        out2 = np.zeros((depth, ML, xmitEvents))
+        out1 = np.zeros((depth, ML, xmitEvents))
+        out0 = np.zeros((depth, ML, xmitEvents))
+    elif CRE == 2:
+        out1 = np.zeros((depth, ML, xmitEvents))
+        out0 = np.zeros((depth, ML, xmitEvents))
+    elif CRE == 1:
+        out0 = np.zeros((depth, ML, xmitEvents))
+    
+    if ((CRE != 1) and (CRE != 2) and (CRE != 4)):
+        print("\nno sort list for this CRE\n")
+    
+    if Stride == 128:
+        ML_SortList = list(range(128))
+    elif Stride == 32:
+        if CRE == 4:
+            ML_SortList = [4, 4, 5, 5, 6, 6, 7, 7, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 0, 0, 1, 1, 2, 2, 3, 3]
+        else:
+            ML_SortList = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    elif Stride == 16:
+        if CRE == 1:
+            ML_SortList = [0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15]
+        elif CRE == 2:
+            ML_SortList = [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7]
+        elif CRE == 4:
+            ML_SortList = [0, 0, 1, 1, 2, 2, 3, 3, 0, 0, 1, 1, 2, 2, 3, 3]
+    elif Stride == 12:
+        if CRE ==1:
+            ML_SortList = [0, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9, 11]
+        elif CRE == 2:
+            ML_SortList = [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+        elif CRE == 4:
+            ML_SortList = [0, 0, 1, 1, 2, 2, 0, 0, 1, 1, 2, 2]
+    elif Stride == 8:
+        if CRE == 1:
+            ML_SortList = [0, 2, 4, 6, 1, 3, 5, 7]
+        elif CRE == 2:
+            ML_SortList = [0, 1, 2, 3, 0, 1, 2, 3]
+        elif CRE == 4:
+            ML_SortList = [0, 0, 1, 1, 0, 0, 1, 1]
+    elif Stride == 4:
+        if CRE == 1:
+            ML_SortList = [0, 2, 1, 3]
+        elif CRE == 2:
+            ML_SortList = [0, 1, 0, 1]
+        elif CRE == 4:
+            ML_SortList = [0, 0, 0, 0]
+    elif Stride == 2:
+        if CRE == 1:
+            ML_SortList = [0, 1]
+        elif CRE == 2:
+            ML_SortList = [0, 0]
+        elif CRE == 4:
+            ML_SortList = [0, 0]
+    else:
+        print ("\nno sort list for this stride\n")
+    
+    if ((ML-1)>max(ML_SortList)) or (CRE == 4 and Stride < 16) or (CRE == 2 and Stride < 4):
+        print ("\nCaptured ML is insufficient, some ML were not captured\n")
+    
+    # Sort 
+    for k in range(ML):
+        iML = np.where(ML_SortList == MLs[k])
+        out0[:depth-1, k, :] = RFinput[iML[0]:Stride:(depth*Stride),:]
+        if CRE == 2:
+            out1[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
+            out2[:depth,k,:] = RFinput[iML[1]:Stride:(depth*Stride),:]
+            out3[:depth,k,:] = RFinput[iML[1]:Stride:(depth*Stride),:]
+        elif CRE == 4:
+            out2[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
+            out3[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
+
+    return out0, out1, out2, out3
+
+     
+
+def parseDataF(rawrfdata, headerInfo):
+
+    # Definitions
+    minNeg = 2^18
+
+    # Find header clumps
+    # iHeader pts to the index of the header clump
+    # Note that each Header is exactly 1 "Clump" long
+    iHeader = np.where((rawrfdata[0,:] & 1572864)==524288)
+    numHeaders = len(iHeader) - 1 # Ignore last header as it is a part of a partial line
+
+    # Get maximum number of samples between consecutive headers
+    maxNumSamples = 0
+    for m in range(numHeaders):
+        tempMax = iHeader[m+1] - iHeader[m] - 1
+        if (tempMax > maxNumSamples):
+            maxNumSamples = tempMax
+    
+    numSamples = maxNumSamples*12
+
+    # Preallocate arrays
+    lineData = np.zeros((numSamples, numHeaders), dtype = np.int32)
+    lineHeader = np.zeros((numSamples, numHeaders), dtype = np.uint8)
+
+    # Extract data
+    for m in range(numHeaders):
+        iStartData = iHeader[m]+2
+        iStopData = iHeader[m+1]-1
+
+        if headerInfo.Data_Type[m] == float(0x5a):
+            iStopData = iStartData + 10000
+        
+        # Get Data for current line and convert to 2's complement values
+        lineData_u32 = rawrfdata[:21,iStartData:iStopData]
+        lineData_s32 = np.int32(lineData_u32[:,:]&524287)
+        iNeg = np.where(lineData_s32 >= minNeg)
+        lineData_s32[iNeg] = lineData_s32[iNeg]-2*minNeg
+        lineHeader_u8 = (lineData_u32[:,:] & 1572864) >> 19
+
+        lineData[0:lineData_s32.size-1:m] = lineData_s32[:lineData_s32.size-1]
+        lineHeader[:lineHeader_u8.size-1,m] = lineHeader_u8[:lineHeader_u8.size-1]
+
+    return lineData, lineHeader
+
+
+def parseHeaderV(rawrfdata):
+    temp_headerInfo = HeaderInfo()
+
+    iHeader = np.where(np.uint8(rawrfdata[2,0,:])&224)
+    numHeaders = len(iHeader)-1 # Ignore last header as it is part of a partial line
+
+    # Get infor for each header
+    for m in range(len(numHeaders)):
+        packedHeader = ''
+        for k in np.arange(11,0,-1):
+            temp = ''
+            for i in np.arange(2,0,-1):
+                temp += bin(np.uint8(rawrfdata[i,k,iHeader[m]]))
+
+            # Discard first 3 bits, redundant info
+            packedHeader += temp[3:24]
+
+               
+
+        iBit = 0
+        temp_headerInfo.RF_CaptureVersion[m] = int(packedHeader[iBit:iBit+4],2)
+        iBit += 4
+        temp_headerInfo.Tap_Point[m] = int(packedHeader[iBit:iBit+3],2)
+        iBit += 3
+        temp_headerInfo.Data_Gate[m] = int(packedHeader[iBit],2)
+        iBit += 1
+        temp_headerInfo.Multilines_Capture[m] = int(packedHeader[iBit:iBit+4],2)
+        iBit += 4
+        temp_headerInfo.RF_Sample_Rate[m] = int(packedHeader[iBit],2)
+        iBit += 1
+        temp_headerInfo.Steer[m] = int(packedHeader[iBit:iBit+6],2)
+        iBit += 6
+        temp_headerInfo.elevationPlaneOffset[m] = int(packedHeader[iBit:iBit+8],2)
+        iBit += 8
+        temp_headerInfo.PM_Index[m] = int(packedHeader[iBit:iBit+2],2)
+        iBit += 2
+        temp_headerInfo.Line_Index[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Pulse_Index[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Data_Format[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Data_Type[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Header_Tag[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Threed_Pos[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Mode_Info[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Frame_ID[m] = int(packedHeader[iBit:iBit+32],2)
+        iBit += 32
+        temp_headerInfo.CSID[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Line_Type[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Time_Stamp = int(packedHeader[iBit:iBit+32],2)
+
+    return temp_headerInfo
+
+def parseHeaderF(rawrfdata):
+
+    # Find header clumps
+    # iHeader pts to the index of the header clump
+    # Note that each header is exactly 1 "Clump" long
+    iHeader = np.where(rawrfdata[0,:]&1572864 == 524288)
+    numHeaders = len(iHeader) - 1 # Ignore last header as it is a part of a partial line
+
+    temp_headerInfo = HeaderInfo()
+
+    # Get info for Each Header
+    for m in range(len(numHeaders)):
+        packedHeader = bin(rawrfdata[12,iHeader[m]],4)
+        for i in np.arange(11,0,-1):
+            packedHeader += bin(rawrfdata[i,iHeader[m]],21)
+
+        iBit = 2
+        temp_headerInfo.RF_CaptureVersion[m] = int(packedHeader[iBit:iBit+4],2)
+        iBit += 4
+        temp_headerInfo.Tap_Point[m] = int(packedHeader[iBit:iBit+3],2)
+        iBit += 3
+        temp_headerInfo.Data_Gate[m] = int(packedHeader[iBit],2)
+        iBit += 1
+        temp_headerInfo.Multilines_Capture[m] = int(packedHeader[iBit:iBit+4],2)
+        iBit += 4
+        iBit += 15 # Waste 15 bits (unused)
+        temp_headerInfo.RF_Sample_Rate[m] = int(packedHeader[iBit],2)
+        iBit += 1
+        temp_headerInfo.Steer[m] = int(packedHeader[iBit:iBit+8],2)
+        iBit += 8
+        temp_headerInfo.elevationPlaneOffset[m] = int(packedHeader[iBit:iBit+2],2)
+        iBit += 2
+        temp_headerInfo.PM_Index[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Line_Index[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Pulse_Index[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Data_Format[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Data_Type[m] = int(packedHeader[iBit: iBit+16], 2)
+        iBit += 16
+        temp_headerInfo.Header_Tag[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Threed_Pos[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Mode_Info[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Frame_ID[m] = int(packedHeader[iBit:iBit+32],2)
+        iBit += 32
+        temp_headerInfo.CSID[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Line_Type[m] = int(packedHeader[iBit:iBit+16],2)
+        iBit += 16
+        temp_headerInfo.Time_Stamp[m] = int(packedHeader[(np.arange(iBit,iBit+13,1),np.arange(iBit+15,iBit+34))])
+    
+    return temp_headerInfo
+
+
+
+
+def parseDataV(rawrfdata, headerInfo):
+    # Definitions
+    minNeg = 16*(2^16) # Used to convert offset integers to 2's complement
+
+    # Find header clumps
+    # iHeader pts to the index of the header clump
+    # Note that each Header is exactly 1 "Clump" long
+    iHeader = np.where(rawrfdata[2,0,:]&224==64)
+    numHeaders = len(iHeader)-1 # Ignore last header as it is a part of a partial line
+    numSamples = (iHeader[1]-iHeader[0]-1)*12
+    
+    # Preallocate arrays
+    lineData = np.zeros((numSamples, numHeaders), dtype = np.int32)
+    lineHeader = np.zeros((numSamples, numHeaders), dtype = np.uint8)
+
+    # Extract data
+    for m in range(len(numHeaders)):
+
+        # Get data in between headers
+        iStartData = iHeader[m]+1
+        iStopData = iHeader[m+1]-1
+
+        # Push pulses (DT 0x5a) are very long, and have no valid RX data
+        if headerInfo.Data_Type[m] == float(0x5a):
+            # set stop data to a reasonable value to keep file size from blowing up
+            iStopData = iStartData+10000
+        
+        # Get Data for current line and convert to 2's complement values
+        lineData_u8 = rawrfdata[:,:,iStartData:iStopData]
+        lineData_s32 = np.int32(lineData_u8[0,:,:])+np.int32(lineData_u8[1,:,:])*2^8+np.int32(lineData_u8[2,:,:]&np.uint8(31))*2^16
+        iNeg = np.where(lineData_s32>=minNeg)
+        lineData_s32[iNeg] = lineData_s32[iNeg]-2*minNeg
+        lineHeader_u8 = (lineData_u8[2,:,:]&224)>>6
+
+        lineData[:lineData_s32.size-1,m] = lineData_s32[:lineData_s32.size-1]
+        lineHeader[:lineHeader_u8.size-1,m] = lineHeader_u8[:lineHeader_u8.size-1]
+
+    return lineData, lineHeader
+
+
+def parseFileHeader(file_obj, endianness):
+    fileVersion = int.from_bytes(file_obj.read(4), endianness, signed=False)
+    numFileHeaderBytes = int.from_bytes(file_obj.read(4), endianness, signed=False)
+    print("\tFile Version: {0}\n\tHeader Size: {1} bytes\n".format(fileVersion, numFileHeaderBytes))
+
+    # Handle accordingly to fileVersion
+    temp_dbParams = dbParams()
+    if fileVersion == 2:
+        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(4)
+        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(4)
+        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(4)
+        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(4)
+        temp_dbParams.elevationMultilineFactor = file_obj.read(4)
+        temp_dbParams.numPiPulses = file_obj.read(4)
+        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11),(14,11))
+        temp_dbParams.fastPiEnabled = file_obj.read(4)
+        temp_dbParams.numZones2d = file_obj.read(4)
+        temp_dbParams.numSubVols = file_obj.read(1)
+        temp_dbParams.numPlanes = file_obj.read(1)
+        temp_dbParams.zigZagEnabled = file_obj.read(1)
+
+    elif fileVersion == 3:
+        temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.azimuthMultilineFactorXbrOut = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.azimuthMultilineFactorXbrIn = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numOfSonoCTAngles2dActual = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.elevationMultilineFactor = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numPiPulses = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.num2DCols = np.reshape([int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14*11)],(14,11), order='F')
+        temp_dbParams.fastPiEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numZones2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numSubVols = int.from_bytes(file_obj.read(4), endianness, signed=False)
+        temp_dbParams.numPlanes = int.from_bytes(file_obj.read(4), endianness, signed=False)
+        temp_dbParams.zigZagEnabled = int.from_bytes(file_obj.read(4), endianness, signed=False)
+
+        temp_dbParams.multilLineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.linesPerEnsCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.ensPerSeqCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numCfCols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14)]
+        temp_dbParams.numCfEntries = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numCfDummies = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+
+    elif fileVersion == 4:
+        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
+
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
+
+        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
+
+        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
+
+        temp_dbParams.numPiPulses = file_obj.read(3)
+        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14,11))
+        temp_dbParams.fastPiEnabled = file_obj.read(3)
+        temp_dbParams.numZones2d = file_obj.read(3)
+        temp_dbParams.numSubVols = file_obj.read(1)
+
+        temp_dbParams.Planes = file_obj.read(1)
+
+        temp_dbParams.zigZagEnabled = file_obj.read(1)
+
+        temp_dbParams.linesPerEnsCf = file_obj.read(3)
+        temp_dbParams.ensPerSeqCf = file_obj.read(3)
+        temp_dbParams.numCfCols = file_obj.read(14)
+        temp_dbParams.numCfEntries = file_obj.read(3)
+        temp_dbParams.numCfDummies = file_obj.read(3)
+
+    elif fileVersion == 5:
+        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
+
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
+
+        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
+
+        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
+        temp_dbParams.multiLineFactorCf = file_obj.read(3)
+
+        temp_dbParams.numPiPulses = file_obj.read(3)
+        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14,11))
+        temp_dbParams.fastPiEnabled = file_obj.read(3)
+        temp_dbParams.numZones2d = file_obj.read(3)
+        temp_dbParams.numSubVols = file_obj.read(1)
+
+        temp_dbParams.numPlanes = file_obj.read(1)
+
+        temp_dbParams.zigZagEnabled = file_obj.read(1)
+
+        temp_dbParams.linesPerEnsCf = file_obj.read(3)
+        temp_dbParams.ensPerSeqCf = file_obj.read(3)
+        temp_dbParams.numCfCols = file_obj.read(14)
+        temp_dbParams.numCfEntries = file_obj.read(3)
+        temp_dbParams.numCfDummies = file_obj.read(3)
+
+    elif fileVersion == 6:
+        temp_dbParams.tapPoint = file_obj.read(1)
+        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
+        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
+        temp_dbParams.multiLineFactorCf = file_obj.read(3)
+        temp_dbParams.numPiPulses = file_obj.read(3)
+        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14, 11))
+        temp_dbParams.fastPiEnabled = file_obj.read(3)
+        temp_dbParams.numZones2d = file_obj.read(3)
+        temp_dbParams.numSubVols = file_obj.read(1)
+        temp_dbParams.numPlanes = file_obj.read(1)
+        temp_dbParams.zigZagEnabled = file_obj.read(1)
+        temp_dbParams.linesPerEnsCf = file_obj.read(3)
+        temp_dbParams.ensPerSeqCf = file_obj.read(3)
+        temp_dbParams.numCfCols = file_obj.read(14)
+        temp_dbParams.numCfEntries = file_obj.read(3)
+        temp_dbParams.numCfDummies = file_obj.read(3)
+
+    else:
+        numFileHeaderBytes = 0
+        print("\nUnknown file version\n")
+
+    return temp_dbParams, numFileHeaderBytes
+
+def ubit21_helper(num, offset_bytes, fn):
+        b = ConstBitStream(filename=fn)
+        b.read(offset_bytes*8)
+        bytes_list = b.read(int(np.ceil(num*21/8))*8).bytes
+        return_list = []
+        bit_offset = 8
+        i = 0
+        lim = int(np.ceil(num*21/8))-2
+        while i < lim:
+            first = ''
+            second = ''
+            third = ''
+            for j in range(7,7-bit_offset,-1):
+                first += str(bytes_list[i] >> j & 1)
+                second += str(bytes_list[i+1] >> j & 1)
+            for j in range(7-bit_offset,-1,-1):
+                second += str(bytes_list[i+1] >> j & 1)
+            bits_left = 21 - len(first) - len(second)
+            while bits_left > 8 and i < (len(bytes_list)-2):
+                second_sub = ''
+                for j in range(7,-1,-1):
+                    second_sub += str(bytes_list[i+2] >> j & 1)
+                second = second_sub + second
+                bits_left = 21-len(first) - len(second)
+                i += 1             
+            bit_offset = 8 - bits_left
+            for j in range(bits_left-1,-1,-1):
+                third += str(bytes_list[i+2] >> j & 1)
+            bin_val = str('0b'+third + second + first)
+            return_list.append(ConstBitStream(bin_val).uint)
+            i += 2
+            if i < lim:
+                first = ''
+                second = ''
+                third = ''
+                for j in range(7,7-bit_offset,-1):
+                    first += str(bytes_list[i] >> j & 1)
+                    second += str(bytes_list[i+1] >> j & 1)
+                for j in range(7-bit_offset,-1,-1):
+                    second += str(bytes_list[i+1] >> j & 1)
+                bits_left = 21 - len(first) - len(second)
+                while bits_left > 8 and i < (len(bytes_list)-2):
+                    second_sub = ''
+                    for j in range(7,-1,-1):
+                        second_sub += str(bytes_list[i+2] >> j & 1)
+                    second = second_sub + second
+                    bits_left = 21-len(first) - len(second)
+                    i += 1             
+                bit_offset = 8 - bits_left
+                for j in range(bits_left-1,-1,-1):
+                    third += str(bytes_list[i+2] >> j & 1)
+                bin_val = str('0b'+third + second + first)
+                return_list.append(ConstBitStream(bin_val).uint)
+                i += 2
+
+        return return_list
+
+def ubit4_helper(num, offset_bytes, fn):
+    b = ConstBitStream(filename=fn)
+    b.read(offset_bytes*8)
+    byte_list = b.read(int(np.ceil(num*4/8))*8).bytes
+    return_list = []
+    for i in range(int(np.ceil(num*4/8))):
+        byte_str = ''
+        for j in range(3,-1,-1):
+            byte_str += str(byte_list[i] >> j & 1)
+        bin_val = str('0b'+byte_str)
+        return_list.append(ConstBitStream(bin_val).uint)
+        byte_str = ''
+        for j in range(7,3,-1):
+            byte_str += str(byte_list[i] >> j & 1)
+        bin_val = str('0b'+byte_str)
+        return_list.append(ConstBitStream(bin_val).uint)
+    return return_list[:num]
+
+
+def parseRF(filepath):
+
+    rfdata = Rfdata()
+    fn = filepath
+    print (str ("Opening: " + fn))
+    fileinfo = os.stat(fn)
+    file_obj = open(fn, 'rb')
+
+    # Voyager or Fusion?
+    VHeader = [0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 255, 255, 0, 0, 255, 255, 255, 255, 160, 160]
+    FHeader = [0, 0, 0, 0, 255, 255, 0, 0, 255, 255, 255, 255, 0, 0, 255, 255, 255, 255, 11, 11 ]
+    fileHeaderSize = len(VHeader)
+    
+    fileHeader = list(file_obj.read(fileHeaderSize))
+    isVoyager = False
+    hasFileHeader = False
+
+    if fileHeader == VHeader:
+        print("Header information found ...")
+        print("Parsing Voyager RF capture file ...")
+        isVoyager = True
+        hasFileHeader = True
+    elif fileHeader == FHeader:
+        print("Header information found:")
+        print("Parsing Fusion RF capture file ...")
+        hasFileHeader = True
+    else: # Legacy V-ACB file
+        print("Parsing Voyager RF capture file ...")
+        isVoyager = True
+
+
+    # Load RAW RF data
+    start_time = datetime.now()
+
+    # Read out file header info
+    endianness = 'little'
+    if hasFileHeader:
+        if isVoyager:
+            endianness = 'big'      
+
+        [rfdata.dbParams, numFileHeaderBytes] = parseFileHeader(file_obj, endianness)
+        totalHeaderSize = fileHeaderSize+8+numFileHeaderBytes # 8 bytes from fileVersion and numFileHeaderBytes
+        # fseek(fid, totalHeaderSize, 'bof')
+    else:
+        rfdata.dbParams = []
+        totalHeaderSize = 0
+    
+    readOffset = 0
+    readSize = os.stat(fn).st_size - totalHeaderSize
+
+    if isVoyager:
+        # Align read offset and size
+        alignment = np.arange(0,readSize,36)
+        offsetDiff = alignment - readOffset
+        readDiff = alignment - readSize
+        readOffset = alignment[np.where(offsetDiff >= 0)[0][0]]
+        readSize = alignment[np.where(readDiff >= 0)[0][0]]
+        
+        # Start reading
+        rawrfdata = open(fn,'rb').read(readSize)
+    
+    else: # isFusion
+        # Align read and offset size
+        alignment = np.arange(0,readSize+1,32)
+        offsetDiff = alignment - readOffset
+        readDiff = alignment - readSize 
+        readOffset = alignment[np.where(offsetDiff >= 0)[0][0]]
+        readSize = alignment[np.where(readDiff >= 0)[0][0]]
+        numClumps = np.floor(readSize/32) # 256 bit clumps
+        tapPoint = rfdata.dbParams.tapPoint
+
+        file_obj.read(readOffset*2)   
+        partA = ubit21_helper(12*int(numClumps), totalHeaderSize, fn)
+        np.reshape(partA, (12,int(numClumps)), order='F')
+        partB = ubit4_helper(int(numClumps), totalHeaderSize, fn)
+        rawrfdata = np.zeros((13,int(numClumps)))
+        rawrfdata[:12] = partA
+        rawrfdata[12] = partB
+
+    # Reshape Raw RF Dawta
+    if isVoyager:
+        numClumps = np.floor(len(rawrfdata)/36) # 1 Clump = 12 Samples (1 Sample = 3 bytes)
+
+        rlimit = 180000000 # Limit ~172 MB for reshape workload, otherwise large memory usage
+        if len(rawrfdata)>rlimit:
+            numChunks = np.floor(len(rawrfdata/rlimit))
+            numremBytes = np.mod(len(rawrfdata),rlimit)
+            numClumpGroup = rlimit/36
+
+            temp = np.zeros((numChunks+1,3,12,numClumpGroup))
+            m=1
+            n=1
+            # Reshape array into clumps 
+            for i in range(numChunks):
+                temp[i]=np.reshape(rawrfdata[m:m+rlimit],(3,12,numClumpGroup))
+                m += rlimit
+                n += numClumpGroup
+            
+            # Handle the remaining butes
+            if numremBytes > 0:
+                temp[numChunks]=np.reshape(rawrfdata[m:numClumps*36+1], (3,12,numClumps-n+1))
+
+            # Combine the reshaped arrays
+            rawrfdata = np.concatenate((temp[:]),axis=2)
+        
+    print(str("Elapsed time is "+n (datetime.now().seconds-start_time.seconds)+" seconds."))
+
+    # Parse Header
+    print("Parsing header info ...")
+    # Extract header info
+    if isVoyager:
+        headerInfo = parseHeaderV(rawrfdata)
+    else: # isFusion
+        # if tapPoint == 7:
+        #     headerInfo = parseHeaderAdcF(rawrfdata)
+        # else:
+        headerInfo = parseHeaderF(rawrfdata)
+
+    print(str("Elapsed time is " + (datetime.now().seconds-start_time.seconds) + " seconds."))
+
+    # Parse RF Data
+    print("Parsing RF data ...")
+    # Extract RF datad
+    Tap_Point = headerInfo.Tap_Point[0]
+    if isVoyager:
+        [lineData, lineHeader] = parseDataV(rawrfdata, headerInfo)
+    else: # isFusion
+        # if Tap_Point == 7: #Post-ADC capture
+            # [lineData, lineHeader] = parseDataAdcF(rawrfdata, headerInfo)
+        # else:
+        [lineData, lineHeader] = parseDataF(rawrfdata, headerInfo)
+        Tap_Point = headerInfo.Tap_Point[0]
+        if Tap_Point == 0: # Correct for MS 19 bits of 21 real data bits
+            lineData = lineData[:,:] << 2
+    
+    print (str("Elapsed time is " + (datetime.now().seconds - start_time.seconds) + " seconds."))
+
+    # Pack data
+    rfdata.lineData = lineData
+    rfdata.lineHeader = lineHeader
+    rfdata.headerInfo = headerInfo
+
+    # Free-up Memory
+    del rawrfdata
+    del temp
+
+    # Sort into Data Types
+    # De-interleave rfdata
+    print("Organizing based on data type ...")
+
+    DataType_ECHO = np.arange(1,14)
+    DataType_EchoMMode = 26
+
+    DataType_COLOR = [17, 21, 22, 23, 24]
+    DataType_ColorMMode = [27, 28]
+    DataType_ColorTDI = 24
+
+    DataType_CW = 16
+    DataType_PW = [18,19]
+
+    DataType_Dummy = [20,25,29,30,31]
+
+    DataType_SWI = [90,91]
+
+    # OCI and phantoms
+    DataType_Misc = [15,88,89]
+
+    if Tap_Point == 7:
+        ML_Capture = 128
+    else:
+        ML_Capture = np.double(rfdata.headerInfo.Multilines_Capture[0])
+    
+    if ML_Capture == 0:
+        SAMPLE_RATE = np.double(rfdata.headerInfo.RF_Sample_Rate[0])
+        if SAMPLE_RATE == 0:
+            ML_Capture = 16
+        else: # 20MHz Capture
+            ML_Capture = 32
+
+    Tap_Point = rfdata.headerInfo.Tap_Point[0]
+    if Tap_Point == 7: #Hardware is saving teh tap point as 7 and now we convert it back to 4
+        Tap_Point = 4
+    namePoint = {'PostShepard', 'PostAGNOS', 'PostXBR', 'PostQBP', 'PostADC'}
+    print(str("\t"+namePoint[Tap_Point+1]+"\n\t\tCapture_ML:\t"+ML_Capture+"x\n"))
+
+    xmitEvents = len(rfdata.headerInfo.Data_Type)
+
+    # Find Echo Data
+    echo_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_ECHO)):
+        index = rfdata.headerInfo.Data_Type & 255 # Find least significant byte
+        echo_index = echo_index | index 
+
+    if np.sum(echo_index) > 0:
+        # Remove false gate data at the beginning of the line
+        echoData = rfdata.lineData[:,echo_index]
+        #pre-XBR Sort
+        if Tap_Point == 0 or Tap_Point == 1:
+            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrIn[0]*rfdata.dbParams.elevationMultilineFactor[0]
+            print(str("\t\tEcho_ML:\t"+ML_Actual+"x\n"))
+            CRE = 1
+            rfdata.echoData = SortRF(echoData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+        elif Tap_Point == 2: # post-XBR Sort
+            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrOut*rfdata.dbParams.elevationMultilineFactor
+            print(str("\t\tEcho_ML:\t"+ML_Actual+"x\n"))
+            CRE = rfdata.dbParams.acqNumActiveScChannels2d
+            print(str("\t\tCRE:\t"+CRE+"\n"))
+            [rfdata.echoData, rfdata.echoData1, rfdata.echoData2, rfdata.echoData3] = SortRF(echoData, ML_Capture, ML_Actual, CRE, isVoyager)
+            
+        elif Tap_Point == 4: # post-ADC sort
+            ML_Actual = 128
+            print("\t\tEcho_ML:\t"+ML_Actual+"x\n")
+            CRE = 1
+            rfdata.echoData = SortRF(echoData, ML_Actual, ML_Actual, CRE, isVoyager)
+
+        else:
+            warnings.warn("Do not know how to sort this data set")
+
+    # Find Echo MMode Data
+    echoMMode_index = rfdata.headerInfo.Data_Type == DataType_EchoMMode
+    if np.sum(echoMMode_index) > 0:
+        echoMModeData = pruneData(rfdata.lineData[:,echoMMode_index], rfdata.lineHeader[:,echoMMode_index], ML_Capture)
+        ML_Actual = 1
+        print(str("\t\tEchoMMode_ML:\t"+ML_Actual+"x\n"))
+        CRE = 1
+        rfdata.echoMModeData = SortRF(echoMModeData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    # Find color data
+    color_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_COLOR)):
+        index = rfdata.headerInfo.Data_Type == DataType_COLOR[i]
+        color_index = color_index | index
+    
+    if (sum(color_index)>0):
+        colorData = pruneData(rfdata.lineData[:,color_index], rfdata.lineHeader[:,color_index], ML_Capture)
+        if (Tap_Point == 0 or Tap_Point == 1):
+            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrInCf*rfdata.dbParams.elevationMultilineFactorCf
+        else:
+            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrOutCf*rfdata.dbParams.elevationMultilineFactorCf
+        print("\t\tColor_ML:\t{0}x\n".format(ML_Actual))
+        CRE = 1
+        rfdata.colorData = SortRF(colorData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+        pkt = rfdata.dbParams.linesPerEnsCd
+        nlv = rfdata.dbParams.ensPerSeqCf
+        grp = rfdata.dbParams.numCfCols/rfdata.dbParams.ensPerSeqCf
+        depth = rfdata.colorData.shape[0]
+
+        # Extract and rearrange flow RF data
+        frm = np.floor(rfdata.colorData.shape[2]/(nlv*pkt*grp)) # whole frames
+        if frm == 0:
+            warnings.warn("Cannot fully parse color data. RF capture does not contain at least one whole color frame.")
+            frm = 1
+            grp = np.floor(rfdata.colorData.shape[2]/(nlv*pkt))
+        rfdata.colorData = rfdata.colorData[:,:,0:pkt*nlv*grp*frm-1]
+        rfdata.colorData = np.reshape(rfdata.colorData, [depth, ML_Actual, nlv, pkt, grp, frm])
+        rfdata.colorData = np.transpose(rfdata.colorData, (0,3,1,2,4,5))
+
+    # Find Color MMode Data
+    colorMMode_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_ColorMMode)):
+        index = rfdata.headerInfo.Data_Type == DataType_ColorMMode[i]
+        colorMMode_index = colorMMode_index | index
+    
+    if sum(colorMMode_index) > 0:
+        colorMModeData = pruneData(rfdata.lineData[:,colorMMode_index], rfdata.lineHeader[:,colorMMode_index], ML_Capture)
+        ML_Actual = 1
+        CRE = 1
+        rfdata.colorMModeData = SortRF(colorMModeData, ML_Capture, ML_Actual, CRE, isVoyager)
+    
+    # Find CW Doppler Data
+    cw_index = np.zeros(xmitEvents)
+    index = rfdata.headerInfo.Data_Type == DataType_CW
+    cw_index = cw_index | index
+
+    if (sum(cw_index) > 0):
+        cwData = pruneData(rfdata.lineData[:,cw_index], rfdata.lineDeader[:,cw_index], ML_Capture)
+        ML_Actual = 1
+        CRE = 1
+        rfdata.cwData = SortRF(cwData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    # Find PW Doppler Data
+    pw_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_PW)):
+        index = rfdata.headerInfo.Data_Type == DataType_PW[i]
+        pw_index = pw_index | index
+
+    if (sum(cw_index) > 0):
+        pwData = pruneData(rfdata.lineData[:,pw_index], rfdata.lineDeader[:,pw_index], ML_Capture)
+        ML_Actual = 1
+        CRE = 1
+        rfdata.cwData = SortRF(pwData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    # Find Dummy Data
+    dummy_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_Dummy)):
+        index = rfdata.headerInfo.Data_Type == DataType_Dummy[i]
+
+    if sum(dummy_index)>0:
+        dummyData = pruneData(rfdata.lineData[:, dummy_index], rfdata.lineHeader[:, dummy_index], ML_Capture)
+        ML_Actual = 2
+        CRE = 1
+        rfdata.dummyData = SortRF(dummyData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    # Find Shearwave Data
+    swi_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_SWI)):
+        index = rfdata.headerInfo.Data_Type == DataType_SWI[i]
+        swi_index = swi_index | index
+    
+    if sum(swi_index) > 0:
+        swiData = pruneData(rfdata.lineData[:,swi_index], rfdata.lineHeader[:,swi_index], ML_Capture)
+        ML_Actual = ML_Capture
+        CRE = 1
+        rfdata.swiData = SortRF(swiData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    # Find Misc Data
+    misc_index = np.zeros(xmitEvents)
+    for i in range(len(DataType_Misc)):
+        index = rfdata.headerInfo.Data_Type == DataType_Misc[i]
+        misc_index = misc_index | index
+    
+    if sum(misc_index) > 0:
+        miscData = pruneData(rfdata.lineData[:,misc_index], rfdata.lineHeader[:,misc_index], ML_Capture)
+        ML_Actual = ML_Capture
+        CRE = 1
+        rfdata.miscData = SortRF(miscData, ML_Capture, ML_Actual, CRE, isVoyager)
+
+    print (str("Elapsed time is " + (datetime.now().seconds - start_time.seconds) + " seconds."))
+
+    # Clean up empty fields in struct
+    print("Done")
+
+
+
+
+
+
+def main_parser_stanford(folderName, fileName, txBeamperFrame=125, NumSonoCTAngles=5, ML_out=2, ML_in=32, os=2256):
+    rf = parseRF(str(folderName+'/'+fileName))
+
+    if (rf.headerInfo.Line_Index[249] == rf.headerInfo.Line_Index[250]):
+        rf.lineData = rf.lineData[:,list(range(2,rf.lineData.shape[1],2))]
+    else:
+        rf.lineData = rf.lineData[:,list(range(1,rf.lineData.shape[1],2))]
+    
+    # Calculated parameters 
+    numFrame = np.floor(rf.lineData.shape[1]/txBeamperFrame/NumSonoCTAngles)
+    multilinefactor = ML_in
+    pt = np.floor((rf.lineData.shape[0]-os)/multilinefactor)
+
+    rftemp_all_harm = np.zeros((pt,ML_out*txBeamperFrame))
+    rftemp_all_fund = np.zeros((pt,ML_out*txBeamperFrame))
+    rf_data_all_harm = np.zeros((numFrame,NumSonoCTAngles,pt,ML_out*txBeamperFrame))
+    rf_data_all_fund = np.zeros((numFrame,NumSonoCTAngles,pt,ML_out*txBeamperFrame))
+
+    for k0 in range(numFrame):
+        for k1 in range(NumSonoCTAngles):
+            for k2 in range(txBeamperFrame):
+                bi = (k0-1)*txBeamperFrame*NumSonoCTAngles+(k1-1)*txBeamperFrame+k2
+                temp = np.transpose(np.reshape(rf.lineData[os+list(range(pt*multilinefactor)),bi],multilinefactor,pt))
+                rftemp_all_harm[list(range(pt)),list(range(ML_out))+(k2-1)*ML_out] = temp[:,(0,1,2)]
+                rftemp_all_fund[list(range(pt)),list(range(ML_out))+(k2-1)*ML_out] = temp[:,(0,1,2)+9]
+
+            rf_data_all_harm[k0][k1] = rftemp_all_harm
+            rf_data_all_fund[k0][k1] = rftemp_all_fund
+
+    # Assemble results
+    parsed_result = Parsed_result()
+    parsed_result.rfData = rf_data_all_fund
+    parsed_result.NumFrame = numFrame
+    parsed_result.pt = pt
+    parsed_result.multilinefactor = multilinefactor
+    parsed_result.NumSonoCTAngles = NumSonoCTAngles
+    parsed_result.txBeamperFrame = txBeamperFrame
+
+    return parsed_result
+
+
+main_parser_stanford('/Users/davidspector/Downloads','C3P11SED00_20180821_102323.rf')
