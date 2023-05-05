@@ -37,6 +37,8 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         self.editImageDisplayGUI.brightnessVal.valueChanged.connect(self.changeBrightness)    
         self.editImageDisplayGUI.sharpnessVal.valueChanged.connect(self.changeSharpness)
 
+        self.scatteredPoints = []
+
         self.redrawRoiButton.setHidden(True)
         
         self.editImageDisplayButton.clicked.connect(self.openImageEditor)
@@ -75,20 +77,17 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         im = plt.imread(os.path.join("imROIs", "bModeIm.png"))
         plt.imshow(im, cmap='Greys_r')
 
-        if len(pointsPlottedX) > 1:
-            xSpline, ySpline = calculateSpline(pointsPlottedX, pointsPlottedY)
-            self.ax.plot(xSpline, ySpline, color = "cyan", zorder=1, linewidth=0.75)
-            self.ax.scatter([pointsPlottedX[0], pointsPlottedX[-1]], [pointsPlottedY[0], pointsPlottedY[-1]], marker="o", s=0.5, c="red", zorder=2)
-        else:
-            self.ax.scatter(pointsPlottedX, pointsPlottedY, marker="o", s=0.5, c="red", zorder=2)
+        if len(pointsPlottedX) > 0:
+            self.scatteredPoints.append(self.ax.scatter(pointsPlottedX[-1], pointsPlottedY[-1], marker="o", s=0.5, c="red", zorder=500))
+            if len(pointsPlottedX) > 1:
+                xSpline, ySpline = calculateSpline(pointsPlottedX, pointsPlottedY)
+                self.spline = self.ax.plot(xSpline, ySpline, color = "cyan", zorder=1, linewidth=0.75)
         self.figure.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
         global cursor
         cursor = matplotlib.widgets.Cursor(self.ax, color="gold", linewidth=0.4, useblit=True)
         cursor.set_active(False)
         plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
-
-        # Refresh canvas
-        self.canvas.draw()
+        self.canvas.draw() # Refresh canvas
 
 
     def openImage(self, imageFilePath, phantomFilePath): # Open initial image given data and phantom files previously inputted
@@ -223,7 +222,7 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         global cursor
         if self.drawRoiButton.isChecked(): # Set up b-mode to be drawn on
             image, =self.ax.plot([], [], marker="o",markersize=3, markerfacecolor="red")
-            self.cid = image.figure.canvas.mpl_connect('button_press_event', interpolatePoints)
+            self.cid = image.figure.canvas.mpl_connect('button_press_event', self.interpolatePoints)
             cursor.set_active(True)
         else: # No longer let b-mode be drawn on
             image, = self.ax.plot([], [], marker="o", markersize=3, markerfacecolor="red")
@@ -233,32 +232,19 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
 
     def undoLastPt(self): # When drawing ROI, undo last point plotted
         if len(pointsPlottedX) > 0:
-            if len(pointsPlottedX) > 1:
-                pointsPlottedX.pop()
-                pointsPlottedY.pop()
-                self.ax.clear()
-                im = plt.imread(os.path.join("imROIs", "bModeIm.png"))
-                plt.imshow(im, cmap='Greys_r')
+            self.scatteredPoints[-1].remove()
+            self.scatteredPoints.pop()
+            pointsPlottedX.pop()
+            pointsPlottedY.pop()
+            if len(pointsPlottedX) > 0:
+                global finalSplineX
+                global finalSplineY
+                oldSpline = self.spline.pop(0)
+                oldSpline.remove()
                 if len(pointsPlottedX) > 1:
-                    global finalSplineX
-                    global finalSplineY
                     finalSplineX, finalSplineY = calculateSpline(pointsPlottedX, pointsPlottedY)
-                    self.ax.plot(finalSplineX, finalSplineY, color = "cyan", linewidth=0.75)
-                    self.ax.scatter([pointsPlottedX[0], pointsPlottedX[-1]], [pointsPlottedY[0], pointsPlottedY[-1]], marker="o", s=0.5, c="red", zorder=2)
-                else:
-                    self.ax.scatter(pointsPlottedX[0], pointsPlottedY[0], marker="o", s=0.5, c="red", zorder=2)
-                self.figure.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
-                plt.tick_params(bottom=False, left=False)
-                self.canvas.draw()
-            elif len(pointsPlottedX) == 1:
-                pointsPlottedX.pop()
-                pointsPlottedY.pop()
-                self.ax.clear()
-                im = plt.imread(os.path.join("imROIs", "bModeIm.png"))
-                plt.imshow(im, cmap='Greys_r')
-                self.figure.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
-                plt.tick_params(bottom=False, left=False)
-                self.canvas.draw()
+                    self.spline = self.ax.plot(finalSplineX, finalSplineY, color = "cyan", linewidth=0.75)
+            self.canvas.draw()
             self.drawRoiButton.setChecked(True)
             self.recordDrawROIClicked()
 
@@ -316,6 +302,23 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         imOutput = sharpness.enhance(self.editImageDisplayGUI.sharpnessVal.value())
         imOutput.save(os.path.join("imROIs", "bModeIm.png"))
         self.plotOnCanvas()
+    
+    def interpolatePoints(self, event): # Update ROI being drawn using spline using 2D interpolation
+        pointsPlottedX.append(int(event.xdata))
+        pointsPlottedY.append(int(event.ydata))
+        plottedPoints = len(pointsPlottedX)
+
+        if plottedPoints > 1:
+            if plottedPoints > 2:
+                oldSpline = self.spline.pop(0)
+                oldSpline.remove()
+
+            xSpline, ySpline = calculateSpline(pointsPlottedX, pointsPlottedY)
+            self.spline = self.ax.plot(xSpline, ySpline, color = "cyan", zorder=1, linewidth=0.75)
+            plt.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
+            plt.tick_params(bottom=False, left=False)
+        self.scatteredPoints.append(self.ax.scatter(pointsPlottedX[-1], pointsPlottedY[-1], marker="o", s=0.5, c="red", zorder=500))
+        self.canvas.draw()
 
 def calculateSpline(xpts, ypts): # 2D spline interpolation
     cv = []
@@ -330,19 +333,3 @@ def calculateSpline(xpts, ypts): # 2D spline interpolation
         tck, u_ = interpolate.splprep(cv.T, s=0.0, k=3)
     x,y = np.array(interpolate.splev(np.linspace(0, 1, 1000), tck))
     return x, y
-
-def interpolatePoints(event): # Update ROI being drawn using spline using 2D interpolation
-    pointsPlottedX.append(int(event.xdata))
-    pointsPlottedY.append(int(event.ydata))
-
-    if len(pointsPlottedX) > 1:
-        # Refresh axis
-        event.inaxes.clear()
-        im = plt.imread(os.path.join("imROIs", "bModeIm.png"))
-        plt.imshow(im, cmap='Greys_r')
-        xSpline, ySpline = calculateSpline(pointsPlottedX, pointsPlottedY)
-        event.inaxes.plot(xSpline, ySpline, color = "cyan", zorder=1, linewidth=0.75)
-        plt.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
-        plt.tick_params(bottom=False, left=False)
-    event.inaxes.scatter([pointsPlottedX[0], pointsPlottedX[-1]], [pointsPlottedY[0], pointsPlottedY[-1]], marker="o", s=0.5, c="red", zorder=2)
-    event.inaxes.figure.canvas.draw()
