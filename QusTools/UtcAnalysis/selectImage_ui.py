@@ -268,7 +268,7 @@ class Ui_selectImage(object):
         self.roiSidebar.setFrameShadow(QFrame.Raised)
         self.roiSidebarLabel = QLabel(self.roiSidebar)
         self.roiSidebarLabel.setObjectName(u"roiSidebarLabel")
-        self.roiSidebarLabel.setGeometry(QRect(0, 0, 341, 51))
+        self.roiSidebarLabel.setGeometry(QRect(0, 40, 341, 51))
         self.roiSidebarLabel.setStyleSheet(u"QLabel {\n"
 "	font-size: 21px;\n"
 "	color: rgb(255, 255, 255);\n"
@@ -277,27 +277,6 @@ class Ui_selectImage(object):
 "	font-weight: bold;\n"
 "}")
         self.roiSidebarLabel.setAlignment(Qt.AlignCenter)
-        self.roiTitleLabel = QLabel(self.roiSidebar)
-        self.roiTitleLabel.setObjectName(u"roiTitleLabel")
-        self.roiTitleLabel.setGeometry(QRect(-40, 50, 191, 51))
-        self.roiTitleLabel.setStyleSheet(u"QLabel {\n"
-"	font-size: 16px;\n"
-"	color: rgb(255, 255, 255);\n"
-"	background-color: rgba(255, 255, 255, 0);\n"
-"	border: 0px;\n"
-"	font-weight: bold;\n"
-"}")
-        self.roiTitleLabel.setAlignment(Qt.AlignCenter)
-        self.roiNameDisplay = QLabel(self.roiSidebar)
-        self.roiNameDisplay.setObjectName(u"roiNameDisplay")
-        self.roiNameDisplay.setGeometry(QRect(110, 50, 241, 51))
-        self.roiNameDisplay.setStyleSheet(u"QLabel {\n"
-"	font-size: 14px;\n"
-"	color: rgb(255, 255, 255);\n"
-"	background-color: rgba(255, 255, 255, 0);\n"
-"	border: 0px;\n"
-"}")
-        self.roiNameDisplay.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.rfAnalysisSidebar = QFrame(self.sidebar)
         self.rfAnalysisSidebar.setObjectName(u"rfAnalysisSidebar")
         self.rfAnalysisSidebar.setGeometry(QRect(0, 360, 341, 121))
@@ -396,9 +375,7 @@ class Ui_selectImage(object):
         self.phantomLabel.setText(QCoreApplication.translate("selectImage", u"Phantom:", None))
         self.imageFilenameDisplay.setText(QCoreApplication.translate("selectImage", u"Sample filename ", None))
         self.phantomFilenameDisplay.setText(QCoreApplication.translate("selectImage", u"Sample filename ", None))
-        self.roiSidebarLabel.setText(QCoreApplication.translate("selectImage", u"Region of Interest (ROI) Selection:", None))
-        self.roiTitleLabel.setText(QCoreApplication.translate("selectImage", u"ROI Name: ", None))
-        self.roiNameDisplay.setText(QCoreApplication.translate("selectImage", u"Sample filename ", None))
+        self.roiSidebarLabel.setText(QCoreApplication.translate("selectImage", u"Region of Interest (ROI) Selection", None))
         self.rfAnalysisLabel.setText(QCoreApplication.translate("selectImage", u"Radio Frequency Data Analysis", None))
         self.exportResultsLabel.setText(QCoreApplication.translate("selectImage", u"Export Results", None))
         self.analysisParamsLabel.setText(QCoreApplication.translate("selectImage", u"Analysis Parameter Selection", None))

@@ -69,26 +69,26 @@ class Ui_rfAnalysis(object):
 "	font-weight: bold\n"
 "}")
         self.label_3.setAlignment(Qt.AlignCenter)
-        self.label_9 = QLabel(self.frame)
-        self.label_9.setObjectName(u"label_9")
-        self.label_9.setGeometry(QRect(100, 40, 241, 51))
-        self.label_9.setStyleSheet(u"QLabel {\n"
+        self.imagePathInput = QLabel(self.frame)
+        self.imagePathInput.setObjectName(u"imagePathInput")
+        self.imagePathInput.setGeometry(QRect(100, 40, 241, 51))
+        self.imagePathInput.setStyleSheet(u"QLabel {\n"
 "	font-size: 14px;\n"
 "	color: rgb(255, 255, 255);\n"
 "	background-color: rgba(255, 255, 255, 0);\n"
 "	border: 0px;\n"
 "}")
-        self.label_9.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
-        self.label_10 = QLabel(self.frame)
-        self.label_10.setObjectName(u"label_10")
-        self.label_10.setGeometry(QRect(100, 70, 241, 51))
-        self.label_10.setStyleSheet(u"QLabel {\n"
+        self.imagePathInput.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.phantomPathInput = QLabel(self.frame)
+        self.phantomPathInput.setObjectName(u"phantomPathInput")
+        self.phantomPathInput.setGeometry(QRect(100, 70, 241, 51))
+        self.phantomPathInput.setStyleSheet(u"QLabel {\n"
 "	font-size: 14px;\n"
 "	color: rgb(255, 255, 255);\n"
 "	background-color: rgba(255, 255, 255, 0);\n"
 "	border: 0px;\n"
 "}")
-        self.label_10.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.phantomPathInput.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.frame_2 = QFrame(self.widget)
         self.frame_2.setObjectName(u"frame_2")
         self.frame_2.setGeometry(QRect(0, 120, 341, 121))
@@ -100,7 +100,7 @@ class Ui_rfAnalysis(object):
         self.frame_2.setFrameShadow(QFrame.Raised)
         self.label_4 = QLabel(self.frame_2)
         self.label_4.setObjectName(u"label_4")
-        self.label_4.setGeometry(QRect(0, 0, 341, 51))
+        self.label_4.setGeometry(QRect(0, 40, 341, 51))
         self.label_4.setStyleSheet(u"QLabel {\n"
 "	font-size: 21px;\n"
 "	color: rgb(255, 255, 255);\n"
@@ -109,17 +109,6 @@ class Ui_rfAnalysis(object):
 "	font-weight: bold;\n"
 "}")
         self.label_4.setAlignment(Qt.AlignCenter)
-        self.label_5 = QLabel(self.frame_2)
-        self.label_5.setObjectName(u"label_5")
-        self.label_5.setGeometry(QRect(-40, 50, 191, 51))
-        self.label_5.setStyleSheet(u"QLabel {\n"
-"	font-size: 16px;\n"
-"	color: rgb(255, 255, 255);\n"
-"	background-color: rgba(255, 255, 255, 0);\n"
-"	border: 0px;\n"
-"	font-weight: bold;\n"
-"}")
-        self.label_5.setAlignment(Qt.AlignCenter)
         self.frame_4 = QFrame(self.widget)
         self.frame_4.setObjectName(u"frame_4")
         self.frame_4.setGeometry(QRect(0, 360, 341, 121))
@@ -180,9 +169,198 @@ class Ui_rfAnalysis(object):
 "	font-weight:bold;\n"
 "}")
         self.label_6.setAlignment(Qt.AlignCenter)
+        self.imDisplayFrame = QFrame(rfAnalysis)
+        self.imDisplayFrame.setObjectName(u"imDisplayFrame")
+        self.imDisplayFrame.setGeometry(QRect(400, 180, 721, 501))
+        self.imDisplayFrame.setFrameShape(QFrame.StyledPanel)
+        self.imDisplayFrame.setFrameShadow(QFrame.Raised)
+        self.displayMbfButton = QPushButton(rfAnalysis)
+        self.displayMbfButton.setObjectName(u"displayMbfButton")
+        self.displayMbfButton.setGeometry(QRect(360, 120, 181, 41))
+        self.displayMbfButton.setStyleSheet(u"QPushButton {\n"
+"	color: white;\n"
+"	font-size: 12px;\n"
+"	background: rgb(90, 37, 255);\n"
+"	border-radius: 15px;\n"
+"}\n"
+"QPushButton:checked {\n"
+"	color:white; \n"
+"	font-size: 12px;\n"
+"	background: rgb(45, 0, 110);\n"
+"	border-radius: 15px;\n"
+"}")
+        self.displaySsButton = QPushButton(rfAnalysis)
+        self.displaySsButton.setObjectName(u"displaySsButton")
+        self.displaySsButton.setGeometry(QRect(560, 120, 181, 41))
+        self.displaySsButton.setStyleSheet(u"QPushButton {\n"
+"	color: white;\n"
+"	font-size: 12px;\n"
+"	background: rgb(90, 37, 255);\n"
+"	border-radius: 15px;\n"
+"}\n"
+"QPushButton:checked {\n"
+"	color:white; \n"
+"	font-size: 12px;\n"
+"	background: rgb(45, 0, 110);\n"
+"	border-radius: 15px;\n"
+"}")
+        self.displaySiButton = QPushButton(rfAnalysis)
+        self.displaySiButton.setObjectName(u"displaySiButton")
+        self.displaySiButton.setGeometry(QRect(760, 120, 181, 41))
+        self.displaySiButton.setStyleSheet(u"QPushButton {\n"
+"	color: white;\n"
+"	font-size: 12px;\n"
+"	background: rgb(90, 37, 255);\n"
+"	border-radius: 15px;\n"
+"}\n"
+"QPushButton:checked {\n"
+"	color:white; \n"
+"	font-size: 12px;\n"
+"	background: rgb(45, 0, 110);\n"
+"	border-radius: 15px;\n"
+"}")
+        self.editImageDisplayButton = QPushButton(rfAnalysis)
+        self.editImageDisplayButton.setObjectName(u"editImageDisplayButton")
+        self.editImageDisplayButton.setGeometry(QRect(990, 700, 181, 41))
+        self.editImageDisplayButton.setStyleSheet(u"QPushButton {\n"
+"	color: white;\n"
+"	font-size: 12px;\n"
+"	background: rgb(90, 37, 255);\n"
+"	border-radius: 15px;\n"
+"}")
+        self.avMbfLabel = QLabel(rfAnalysis)
+        self.avMbfLabel.setObjectName(u"avMbfLabel")
+        self.avMbfLabel.setGeometry(QRect(720, 0, 81, 51))
+        font = QFont()
+        font.setPointSize(14)
+        self.avMbfLabel.setFont(font)
+        self.avMbfLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avMbfLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.avSsLabel = QLabel(rfAnalysis)
+        self.avSsLabel.setObjectName(u"avSsLabel")
+        self.avSsLabel.setGeometry(QRect(720, 35, 91, 51))
+        self.avSsLabel.setFont(font)
+        self.avSsLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avSsLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.avSiLabel = QLabel(rfAnalysis)
+        self.avSiLabel.setObjectName(u"avSiLabel")
+        self.avSiLabel.setGeometry(QRect(720, 70, 71, 51))
+        self.avSiLabel.setFont(font)
+        self.avSiLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avSiLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.avMbfVal = QLabel(rfAnalysis)
+        self.avMbfVal.setObjectName(u"avMbfVal")
+        self.avMbfVal.setGeometry(QRect(820, 0, 51, 51))
+        self.avMbfVal.setFont(font)
+        self.avMbfVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avMbfVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.avSsVal = QLabel(rfAnalysis)
+        self.avSsVal.setObjectName(u"avSsVal")
+        self.avSsVal.setGeometry(QRect(820, 35, 51, 51))
+        self.avSsVal.setFont(font)
+        self.avSsVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avSsVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.avSiVal = QLabel(rfAnalysis)
+        self.avSiVal.setObjectName(u"avSiVal")
+        self.avSiVal.setGeometry(QRect(820, 70, 51, 51))
+        self.avSiVal.setFont(font)
+        self.avSiVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.avSiVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indSiVal = QLabel(rfAnalysis)
+        self.indSiVal.setObjectName(u"indSiVal")
+        self.indSiVal.setGeometry(QRect(970, 70, 51, 51))
+        self.indSiVal.setFont(font)
+        self.indSiVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indSiVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indMbfVal = QLabel(rfAnalysis)
+        self.indMbfVal.setObjectName(u"indMbfVal")
+        self.indMbfVal.setGeometry(QRect(970, 0, 51, 51))
+        self.indMbfVal.setFont(font)
+        self.indMbfVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indMbfVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indMbfLabel = QLabel(rfAnalysis)
+        self.indMbfLabel.setObjectName(u"indMbfLabel")
+        self.indMbfLabel.setGeometry(QRect(870, 0, 81, 51))
+        self.indMbfLabel.setFont(font)
+        self.indMbfLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indMbfLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indSiLabel = QLabel(rfAnalysis)
+        self.indSiLabel.setObjectName(u"indSiLabel")
+        self.indSiLabel.setGeometry(QRect(870, 70, 71, 51))
+        self.indSiLabel.setFont(font)
+        self.indSiLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indSiLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indSsVal = QLabel(rfAnalysis)
+        self.indSsVal.setObjectName(u"indSsVal")
+        self.indSsVal.setGeometry(QRect(970, 35, 51, 51))
+        self.indSsVal.setFont(font)
+        self.indSsVal.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indSsVal.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.indSsLabel = QLabel(rfAnalysis)
+        self.indSsLabel.setObjectName(u"indSsLabel")
+        self.indSsLabel.setGeometry(QRect(870, 35, 101, 51))
+        self.indSsLabel.setFont(font)
+        self.indSsLabel.setStyleSheet(u"QLabel {\n"
+"	color: white;\n"
+"	background-color: rgba(0,0,0,0);\n"
+"}")
+        self.indSsLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.chooseWindowButton = QPushButton(rfAnalysis)
+        self.chooseWindowButton.setObjectName(u"chooseWindowButton")
+        self.chooseWindowButton.setGeometry(QRect(350, 700, 181, 41))
+        self.chooseWindowButton.setStyleSheet(u"QPushButton {\n"
+"	color: white;\n"
+"	font-size: 12px;\n"
+"	background: rgb(90, 37, 255);\n"
+"	border-radius: 15px;\n"
+"}\n"
+"QPushButton:checked {\n"
+"	color:white; \n"
+"	font-size: 12px;\n"
+"	background: rgb(45, 0, 110);\n"
+"	border-radius: 15px;\n"
+"}")
+        self.legend = QFrame(rfAnalysis)
+        self.legend.setObjectName(u"legend")
+        self.legend.setGeometry(QRect(1040, 20, 111, 131))
+        self.legend.setFrameShape(QFrame.StyledPanel)
+        self.legend.setFrameShadow(QFrame.Raised)
         self.constructRoiLabel = QLabel(rfAnalysis)
         self.constructRoiLabel.setObjectName(u"constructRoiLabel")
-        self.constructRoiLabel.setGeometry(QRect(550, -20, 431, 131))
+        self.constructRoiLabel.setGeometry(QRect(310, -10, 431, 131))
         self.constructRoiLabel.setStyleSheet(u"QLabel {\n"
 "	font-size: 29px;\n"
 "	color: rgb(255, 255, 255);\n"
@@ -192,65 +370,6 @@ class Ui_rfAnalysis(object):
         self.constructRoiLabel.setScaledContents(False)
         self.constructRoiLabel.setAlignment(Qt.AlignCenter)
         self.constructRoiLabel.setWordWrap(True)
-        self.imDisplayFrame = QFrame(rfAnalysis)
-        self.imDisplayFrame.setObjectName(u"imDisplayFrame")
-        self.imDisplayFrame.setGeometry(QRect(400, 180, 721, 501))
-        self.imDisplayFrame.setFrameShape(QFrame.StyledPanel)
-        self.imDisplayFrame.setFrameShadow(QFrame.Raised)
-        self.chooseWindowButton = QPushButton(rfAnalysis)
-        self.chooseWindowButton.setObjectName(u"chooseWindowButton")
-        self.chooseWindowButton.setGeometry(QRect(370, 110, 181, 41))
-        self.chooseWindowButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
-        self.displayMbfButton = QPushButton(rfAnalysis)
-        self.displayMbfButton.setObjectName(u"displayMbfButton")
-        self.displayMbfButton.setGeometry(QRect(570, 110, 181, 41))
-        self.displayMbfButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
-        self.displaySsButton = QPushButton(rfAnalysis)
-        self.displaySsButton.setObjectName(u"displaySsButton")
-        self.displaySsButton.setGeometry(QRect(770, 110, 181, 41))
-        self.displaySsButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
-        self.displaySiButton = QPushButton(rfAnalysis)
-        self.displaySiButton.setObjectName(u"displaySiButton")
-        self.displaySiButton.setGeometry(QRect(970, 110, 181, 41))
-        self.displaySiButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
-        self.editImageDisplayButton = QPushButton(rfAnalysis)
-        self.editImageDisplayButton.setObjectName(u"editImageDisplayButton")
-        self.editImageDisplayButton.setGeometry(QRect(950, 695, 181, 41))
-        self.editImageDisplayButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
-        self.psGraphButton = QPushButton(rfAnalysis)
-        self.psGraphButton.setObjectName(u"psGraphButton")
-        self.psGraphButton.setGeometry(QRect(390, 695, 181, 41))
-        self.psGraphButton.setStyleSheet(u"QPushButton {\n"
-"	color: white;\n"
-"	font-size: 12px;\n"
-"	background: rgb(90, 37, 255);\n"
-"	border-radius: 15px;\n"
-"}")
 
         self.retranslateUi(rfAnalysis)
 
@@ -265,19 +384,29 @@ class Ui_rfAnalysis(object):
         self.label.setText(QCoreApplication.translate("rfAnalysis", u"Image Selection:", None))
         self.label_2.setText(QCoreApplication.translate("rfAnalysis", u"Image:", None))
         self.label_3.setText(QCoreApplication.translate("rfAnalysis", u"Phantom:", None))
-        self.label_9.setText(QCoreApplication.translate("rfAnalysis", u"Sample filename ", None))
-        self.label_10.setText(QCoreApplication.translate("rfAnalysis", u"Sample filename ", None))
-        self.label_4.setText(QCoreApplication.translate("rfAnalysis", u"Region of Interest (ROI) Selection:", None))
-        self.label_5.setText(QCoreApplication.translate("rfAnalysis", u"ROI Name: ", None))
+        self.imagePathInput.setText(QCoreApplication.translate("rfAnalysis", u"Sample filename ", None))
+        self.phantomPathInput.setText(QCoreApplication.translate("rfAnalysis", u"Sample filename ", None))
+        self.label_4.setText(QCoreApplication.translate("rfAnalysis", u"Region of Interest (ROI) Selection", None))
         self.label_7.setText(QCoreApplication.translate("rfAnalysis", u"Radio Frequency Data Analysis", None))
         self.label_8.setText(QCoreApplication.translate("rfAnalysis", u"Export Results", None))
         self.label_6.setText(QCoreApplication.translate("rfAnalysis", u"Analysis Parameter Selection", None))
-        self.constructRoiLabel.setText(QCoreApplication.translate("rfAnalysis", u"Radio Frequency Analysis:", None))
-        self.chooseWindowButton.setText(QCoreApplication.translate("rfAnalysis", u"Choose Window to Analyze", None))
         self.displayMbfButton.setText(QCoreApplication.translate("rfAnalysis", u"Display Midband Fit (MBF)", None))
         self.displaySsButton.setText(QCoreApplication.translate("rfAnalysis", u"Display Spectral Slope (SS)", None))
         self.displaySiButton.setText(QCoreApplication.translate("rfAnalysis", u"Display Spectral Intercept (SI)", None))
         self.editImageDisplayButton.setText(QCoreApplication.translate("rfAnalysis", u"Edit Image Display", None))
-        self.psGraphButton.setText(QCoreApplication.translate("rfAnalysis", u"View Power Spectrum Graph", None))
+        self.avMbfLabel.setText(QCoreApplication.translate("rfAnalysis", u"Av.  MBF", None))
+        self.avSsLabel.setText(QCoreApplication.translate("rfAnalysis", u"Av.  SS (1e-6)", None))
+        self.avSiLabel.setText(QCoreApplication.translate("rfAnalysis", u"Av.  SI", None))
+        self.avMbfVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.avSsVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.avSiVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.indSiVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.indMbfVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.indMbfLabel.setText(QCoreApplication.translate("rfAnalysis", u"Ind.  MBF", None))
+        self.indSiLabel.setText(QCoreApplication.translate("rfAnalysis", u"Ind.  SI", None))
+        self.indSsVal.setText(QCoreApplication.translate("rfAnalysis", u"0", None))
+        self.indSsLabel.setText(QCoreApplication.translate("rfAnalysis", u"Ind.  SS (1e-6)", None))
+        self.chooseWindowButton.setText(QCoreApplication.translate("rfAnalysis", u"Choose Window to Analyze", None))
+        self.constructRoiLabel.setText(QCoreApplication.translate("rfAnalysis", u"Radio Frequency Analysis:", None))
     # retranslateUi
 

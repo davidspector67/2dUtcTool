@@ -1,18 +1,17 @@
 from UtcAnalysis.roiSelection_ui import *
 from UtcAnalysis.editImageDisplay_ui_helper import *
+from UtcAnalysis.analysisParamsSelection_ui_helper import *
+from UtcAnalysis.rfAnalysis_ui_helper import *
+from Parsers.philipsParser import getImage
 
-import matlab.engine
 import os
 import numpy as np
 from PIL import Image, ImageEnhance
-import shutil
-import csv
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib 
+import matplotlib
 import scipy.interpolate as interpolate
 
-eng = matlab.engine.start_matlab()
 pointsPlottedX = []
 pointsPlottedY = []
 
@@ -21,9 +20,8 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.imageFilenameDisplay.setHidden(True)
-        self.phantomFilenameDisplay.setHidden(True)
-        self.roiNameDisplay.setHidden(True)
+        self.imagePathInput.setHidden(True)
+        self.phantomPathInput.setHidden(True)
 
         # Prepare B-Mode display plot
         self.horizontalLayout = QHBoxLayout(self.imDisplayFrame)
@@ -37,6 +35,8 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         self.editImageDisplayGUI.brightnessVal.valueChanged.connect(self.changeBrightness)    
         self.editImageDisplayGUI.sharpnessVal.valueChanged.connect(self.changeSharpness)
 
+        self.analysisParamsGUI = AnalysisParamsGUI()
+
         self.scatteredPoints = []
 
         self.redrawRoiButton.setHidden(True)
@@ -46,6 +46,7 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         self.undoLastPtButton.clicked.connect(self.undoLastPt)
         self.closeRoiButton.clicked.connect(self.closeInterpolation)
         self.redrawRoiButton.clicked.connect(self.restartROI)
+        self.acceptRoiButton.clicked.connect(self.acceptROI)
 
     def changeContrast(self):
         self.editImageDisplayGUI.contrastValDisplay.setValue(int(self.editImageDisplayGUI.contrastVal.value()*10))
@@ -66,11 +67,10 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             self.editImageDisplayGUI.show()
 
     def setFilenameDisplays(self, imageName, phantomName):
-        # called in selectImage_ui_helper.py
-        self.imageFilenameDisplay.setHidden(False)
-        self.phantomFilenameDisplay.setHidden(False)
-        self.imageFilenameDisplay.setText(imageName)
-        self.phantomFilenameDisplay.setText(phantomName)
+        self.imagePathInput.setHidden(False)
+        self.phantomPathInput.setHidden(False)
+        self.imagePathInput.setText(imageName)
+        self.phantomPathInput.setText(phantomName)
     
     def plotOnCanvas(self): # Plot current image on GUI
         self.ax = self.figure.add_subplot(111)
@@ -83,9 +83,8 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
                 xSpline, ySpline = calculateSpline(pointsPlottedX, pointsPlottedY)
                 self.spline = self.ax.plot(xSpline, ySpline, color = "cyan", zorder=1, linewidth=0.75)
         self.figure.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
-        global cursor
-        cursor = matplotlib.widgets.Cursor(self.ax, color="gold", linewidth=0.4, useblit=True)
-        cursor.set_active(False)
+        self.cursor = matplotlib.widgets.Cursor(self.ax, color="gold", linewidth=0.4, useblit=True)
+        self.cursor.set_active(False)
         plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
         self.canvas.draw() # Refresh canvas
 
@@ -115,11 +114,13 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
                 # self.invalidPath.setText("Invalid data file.\nPlease use Philips .rf files.")
                 return
             else: # Display Philips image and assign relevant default analysis
-                s = eng.genpath(str(os.getcwd()+'/Machine_Code/Philips'))
-                eng.addpath(s, nargout=0)
-                imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = eng.philips_getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame, nargout=5)
-                self.arHeight = imArray.size[0]
-                self.arWidth = imArray.size[1]
+                # s = eng.genpath(str(os.getcwd()+'/Machine_Code/Philips'))
+                # eng.addpath(s, nargout=0)
+                # imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = eng.philips_getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame, nargout=5)
+                self.frame = 0
+                imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame)
+                self.arHeight = imArray.shape[0]
+                self.arWidth = imArray.shape[1]
                 self.imData = np.array(imArray).reshape(self.arHeight, self.arWidth)
                 self.imData = np.flipud(self.imData) #flipud
                 self.imData = np.require(self.imData,np.uint8,'C')
@@ -128,8 +129,8 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
 
                 self.qIm.mirrored().save(os.path.join("imROIs", "bModeImRaw.png")) # Save as .png file
 
-                self.pixSizeAx = self.imgDataStruct['scBmode'].size[0]
-                self.pixSizeLat = self.imgDataStruct['scBmode'].size[1]
+                self.pixSizeAx = self.imgDataStruct.scBmode.shape[0]
+                self.pixSizeLat = self.imgDataStruct.scBmode.shape[1]
 
                 self.editImageDisplayGUI.contrastVal.setValue(4)
                 self.editImageDisplayGUI.brightnessVal.setValue(0.75)
@@ -146,11 +147,10 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
                 self.threshold = 95
 
         elif dataFileName[-4:] == ".mat": # Display Philips image and assign relevant default analysis params
-            s = eng.genpath(str(os.getcwd()+'/Machine_Code/Philips'))
-            eng.addpath(s, nargout=0)
-            imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = eng.philips_getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame, nargout=5)
-            self.arHeight = imArray.size[0]
-            self.arWidth = imArray.size[1]
+            self.frame = 0
+            imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame)
+            self.arHeight = imArray.shape[0]
+            self.arWidth = imArray.shape[1]
             self.imData = np.array(imArray).reshape(self.arHeight, self.arWidth)
             self.imData = np.flipud(self.imData) #flipud
             self.imData = np.require(self.imData,np.uint8,'C')
@@ -159,47 +159,24 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
 
             self.qIm.mirrored().save(os.path.join("imROIs", "bModeImRaw.png")) # Save as .png file
 
-            self.pixSizeAx = self.imgDataStruct['Bmode'].size[0] #were both scBmode
-            self.pixSizeLat = self.imgDataStruct['Bmode'].size[1]
+            self.pixSizeAx = self.imgDataStruct.bMode.shape[0] #were both scBmode
+            self.pixSizeLat = self.imgDataStruct.bMode.shape[1]
 
             self.editImageDisplayGUI.contrastVal.setValue(4)
             self.editImageDisplayGUI.brightnessVal.setValue(0.75)
             self.editImageDisplayGUI.sharpnessVal.setValue(3)
 
-            self.axialOverlap = 0.5
-            self.lateralOverlap = 0.5
-            self.minFrequency = 3000000
-            self.maxFrequency = 4500000
-            self.axialWinSize = 10#7#1#1480/20000000*10000 # must be at least 10 times wavelength
-            self.lateralWinSize = 10#7#1#1480/20000000*10000 # must be at least 10 times wavelength
-            self.frame = 1
-            self.samplingFreq = 20000000
-            self.threshold = 95
-
-        elif dataFileName[-4:] == ".rfd": # Display Siemens image and assign relevant default analysis params
-            s = eng.genpath(str(os.getcwd()+'/Machine_Code/Siemens'))
-            eng.addpath(s, nargout=0)
-            path = str(os.getcwd() + "/imROIs/bModeImRaw.png")
-            self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = eng.sie_getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, path, nargout=4)
-
-            global rfd
-            rfd = True
-            self.pixSizeAx = self.imgDataStruct['Bmode'].size[0]
-            self.pixSizeLat = self.imgDataStruct['Bmode'].size[1]
-
-            self.editImageDisplayGUI.contrastVal.setValue(1)
-            self.editImageDisplayGUI.brightnessVal.setValue(1)
-            self.editImageDisplayGUI.sharpnessVal.setValue(1)
-
-            self.minFrequency = 7000000
-            self.maxFrequency = 17000000
-            self.axialWinSize = 3.5#1480/40000000*5000 # must be at least 10 times wavelength
-            self.lateralWinSize = 3.5#self.axialWinSize * 6 # must be at least 10 times wavelength
-            self.frame = 51
-            self.samplingFreq = 40000000
-            self.axialOverlap = 0.5
-            self.lateralOverlap = 0.5
-            self.threshold = 95
+            self.analysisParamsGUI.axWinSizeVal.setValue(10)#7#1#1480/20000000*10000 # must be at least 10 times wavelength
+            self.analysisParamsGUI.latWinSizeVal.setValue(10)#7#1#1480/20000000*10000 # must be at least 10 times wavelength
+            self.analysisParamsGUI.axOverlapVal.setValue(50)
+            self.analysisParamsGUI.latOverlapVal.setValue(50)
+            self.analysisParamsGUI.minFreqVal.setValue(3)
+            self.analysisParamsGUI.maxFreqVal.setValue(4.5)
+            self.analysisParamsGUI.startDepthVal.setValue(0.04)
+            self.analysisParamsGUI.endDepthVal.setValue(0.16)
+            self.analysisParamsGUI.clipFactorVal.setValue(95)
+            self.analysisParamsGUI.samplingFreqVal.setValue(20)
+            self.analysisParamsGUI.frameVal.setValue(self.frame)
 
         else:
             return
@@ -219,15 +196,14 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         self.plotOnCanvas()
 
     def recordDrawROIClicked(self):
-        global cursor
         if self.drawRoiButton.isChecked(): # Set up b-mode to be drawn on
-            image, =self.ax.plot([], [], marker="o",markersize=3, markerfacecolor="red")
-            self.cid = image.figure.canvas.mpl_connect('button_press_event', self.interpolatePoints)
-            cursor.set_active(True)
+            # image, =self.ax.plot([], [], marker="o",markersize=3, markerfacecolor="red")
+            # self.cid = image.figure.canvas.mpl_connect('button_press_event', self.interpolatePoints)
+            self.cid = self.figure.canvas.mpl_connect('button_press_event', self.interpolatePoints)
+            self.cursor.set_active(True)
         else: # No longer let b-mode be drawn on
-            image, = self.ax.plot([], [], marker="o", markersize=3, markerfacecolor="red")
-            image.figure.canvas.mpl_disconnect(self.cid)
-            cursor.set_active(False)
+            self.cid = self.figure.canvas.mpl_disconnect(self.cid)
+            self.cursor.set_active(False)
         self.canvas.draw()
 
     def undoLastPt(self): # When drawing ROI, undo last point plotted
@@ -255,7 +231,7 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             plt.imshow(im, cmap='Greys_r')
             pointsPlottedX.append(pointsPlottedX[0])
             pointsPlottedY.append(pointsPlottedY[0])
-            global finalSplineX, finalSplineY, cursor
+            global finalSplineX, finalSplineY
             finalSplineX, finalSplineY = calculateSpline(pointsPlottedX, pointsPlottedY)
             self.ax.plot(finalSplineX, finalSplineY, color = "cyan", linewidth=0.75)
             image, =self.ax.plot([], [], marker="o",markersize=3, markerfacecolor="red")
@@ -268,7 +244,7 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             self.drawRoiButton.setCheckable(False)
             self.redrawRoiButton.setHidden(False)
             self.closeRoiButton.setHidden(True)
-            cursor.set_active(False)
+            self.cursor.set_active(False)
             self.undoLastPtButton.clicked.disconnect()
             self.canvas.draw()
 
@@ -319,6 +295,24 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             plt.tick_params(bottom=False, left=False)
         self.scatteredPoints.append(self.ax.scatter(pointsPlottedX[-1], pointsPlottedY[-1], marker="o", s=0.5, c="red", zorder=500))
         self.canvas.draw()
+
+    def acceptROI(self):
+        if len(pointsPlottedX) > 1 and pointsPlottedX[0] == pointsPlottedX[-1]:
+            self.analysisParamsGUI.rfAnalysisGUI = RfAnalysisGUI(finalSplineX, finalSplineY)
+            self.analysisParamsGUI.rfAnalysisGUI.imgDataStruct = self.imgDataStruct
+            self.analysisParamsGUI.rfAnalysisGUI.imgInfoStruct = self.imgInfoStruct
+            self.analysisParamsGUI.rfAnalysisGUI.refDataStruct = self.refDataStruct
+            self.analysisParamsGUI.rfAnalysisGUI.refInfoStruct = self.refInfoStruct
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.contrastVal.setValue(self.editImageDisplayGUI.contrastVal.value())
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.brightnessVal.setValue(self.editImageDisplayGUI.brightnessVal.value())
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.sharpnessVal.setValue(self.editImageDisplayGUI.sharpnessVal.value())
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.contrastVal.valueChanged.connect(self.analysisParamsGUI.rfAnalysisGUI.changeContrast)
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.brightnessVal.valueChanged.connect(self.analysisParamsGUI.rfAnalysisGUI.changeBrightness)    
+            self.analysisParamsGUI.rfAnalysisGUI.editImageDisplayGUI.sharpnessVal.valueChanged.connect(self.analysisParamsGUI.rfAnalysisGUI.changeSharpness)
+            self.analysisParamsGUI.setFilenameDisplays(self.imagePathInput.text().split('/')[-1], self.phantomPathInput.text().split('/')[-1])
+            self.analysisParamsGUI.show()
+            self.editImageDisplayGUI.hide()
+            self.hide()
 
 def calculateSpline(xpts, ypts): # 2D spline interpolation
     cv = []

@@ -124,26 +124,26 @@ class Ui_constructRoi(object):
 "	font-weight: bold\n"
 "}")
         self.phantomLabel.setAlignment(Qt.AlignCenter)
-        self.imageFilenameDisplay = QLabel(self.imageSelectionSidebar)
-        self.imageFilenameDisplay.setObjectName(u"imageFilenameDisplay")
-        self.imageFilenameDisplay.setGeometry(QRect(100, 40, 241, 51))
-        self.imageFilenameDisplay.setStyleSheet(u"QLabel {\n"
+        self.imagePathInput = QLabel(self.imageSelectionSidebar)
+        self.imagePathInput.setObjectName(u"imagePathInput")
+        self.imagePathInput.setGeometry(QRect(100, 40, 241, 51))
+        self.imagePathInput.setStyleSheet(u"QLabel {\n"
 "	font-size: 14px;\n"
 "	color: rgb(255, 255, 255);\n"
 "	background-color: rgba(255, 255, 255, 0);\n"
 "	border: 0px;\n"
 "}")
-        self.imageFilenameDisplay.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
-        self.phantomFilenameDisplay = QLabel(self.imageSelectionSidebar)
-        self.phantomFilenameDisplay.setObjectName(u"phantomFilenameDisplay")
-        self.phantomFilenameDisplay.setGeometry(QRect(100, 70, 241, 51))
-        self.phantomFilenameDisplay.setStyleSheet(u"QLabel {\n"
+        self.imagePathInput.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.phantomPathInput = QLabel(self.imageSelectionSidebar)
+        self.phantomPathInput.setObjectName(u"phantomPathInput")
+        self.phantomPathInput.setGeometry(QRect(100, 70, 241, 51))
+        self.phantomPathInput.setStyleSheet(u"QLabel {\n"
 "	font-size: 14px;\n"
 "	color: rgb(255, 255, 255);\n"
 "	background-color: rgba(255, 255, 255, 0);\n"
 "	border: 0px;\n"
 "}")
-        self.phantomFilenameDisplay.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.phantomPathInput.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.roiSidebar = QFrame(self.sidebar)
         self.roiSidebar.setObjectName(u"roiSidebar")
         self.roiSidebar.setGeometry(QRect(0, 120, 341, 121))
@@ -155,7 +155,7 @@ class Ui_constructRoi(object):
         self.roiSidebar.setFrameShadow(QFrame.Raised)
         self.roiSidebarLabel = QLabel(self.roiSidebar)
         self.roiSidebarLabel.setObjectName(u"roiSidebarLabel")
-        self.roiSidebarLabel.setGeometry(QRect(0, 0, 341, 51))
+        self.roiSidebarLabel.setGeometry(QRect(0, 30, 341, 51))
         self.roiSidebarLabel.setStyleSheet(u"QLabel {\n"
 "	font-size: 21px;\n"
 "	color: rgb(255, 255, 255);\n"
@@ -164,27 +164,6 @@ class Ui_constructRoi(object):
 "	font-weight: bold;\n"
 "}")
         self.roiSidebarLabel.setAlignment(Qt.AlignCenter)
-        self.roiTitleLabel = QLabel(self.roiSidebar)
-        self.roiTitleLabel.setObjectName(u"roiTitleLabel")
-        self.roiTitleLabel.setGeometry(QRect(-40, 50, 191, 51))
-        self.roiTitleLabel.setStyleSheet(u"QLabel {\n"
-"	font-size: 16px;\n"
-"	color: rgb(255, 255, 255);\n"
-"	background-color: rgba(255, 255, 255, 0);\n"
-"	border: 0px;\n"
-"	font-weight: bold;\n"
-"}")
-        self.roiTitleLabel.setAlignment(Qt.AlignCenter)
-        self.roiNameDisplay = QLabel(self.roiSidebar)
-        self.roiNameDisplay.setObjectName(u"roiNameDisplay")
-        self.roiNameDisplay.setGeometry(QRect(110, 50, 241, 51))
-        self.roiNameDisplay.setStyleSheet(u"QLabel {\n"
-"	font-size: 14px;\n"
-"	color: rgb(255, 255, 255);\n"
-"	background-color: rgba(255, 255, 255, 0);\n"
-"	border: 0px;\n"
-"}")
-        self.roiNameDisplay.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.rfAnalysisSidebar = QFrame(self.sidebar)
         self.rfAnalysisSidebar.setObjectName(u"rfAnalysisSidebar")
         self.rfAnalysisSidebar.setGeometry(QRect(0, 360, 341, 121))
@@ -292,11 +271,9 @@ class Ui_constructRoi(object):
         self.imageSelectionLabelSidebar.setText(QCoreApplication.translate("constructRoi", u"Image Selection:", None))
         self.imageLabel.setText(QCoreApplication.translate("constructRoi", u"Image:", None))
         self.phantomLabel.setText(QCoreApplication.translate("constructRoi", u"Phantom:", None))
-        self.imageFilenameDisplay.setText(QCoreApplication.translate("constructRoi", u"Sample filename ", None))
-        self.phantomFilenameDisplay.setText(QCoreApplication.translate("constructRoi", u"Sample filename ", None))
-        self.roiSidebarLabel.setText(QCoreApplication.translate("constructRoi", u"Region of Interest (ROI) Selection:", None))
-        self.roiTitleLabel.setText(QCoreApplication.translate("constructRoi", u"ROI Name: ", None))
-        self.roiNameDisplay.setText(QCoreApplication.translate("constructRoi", u"Sample filename ", None))
+        self.imagePathInput.setText(QCoreApplication.translate("constructRoi", u"Sample filename ", None))
+        self.phantomPathInput.setText(QCoreApplication.translate("constructRoi", u"Sample filename ", None))
+        self.roiSidebarLabel.setText(QCoreApplication.translate("constructRoi", u"Region of Interest (ROI) Selection", None))
         self.rfAnalysisLabel.setText(QCoreApplication.translate("constructRoi", u"Radio Frequency Data Analysis", None))
         self.exportResultsLabel.setText(QCoreApplication.translate("constructRoi", u"Export Results", None))
         self.analysisParamsLabel.setText(QCoreApplication.translate("constructRoi", u"Analysis Parameter Selection", None))
