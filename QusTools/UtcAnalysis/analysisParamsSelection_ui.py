@@ -175,30 +175,35 @@ class Ui_analysisParams(object):
         self.frameVal.setGeometry(QRect(1060, 425, 51, 31))
         self.frameVal.setStyleSheet(u"QSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.endDepthVal = QDoubleSpinBox(analysisParams)
         self.endDepthVal.setObjectName(u"endDepthVal")
         self.endDepthVal.setGeometry(QRect(1050, 200, 61, 21))
         self.endDepthVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.latOverlapVal = QSpinBox(analysisParams)
         self.latOverlapVal.setObjectName(u"latOverlapVal")
         self.latOverlapVal.setGeometry(QRect(670, 345, 51, 31))
         self.latOverlapVal.setStyleSheet(u"QSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.startDepthVal = QDoubleSpinBox(analysisParams)
         self.startDepthVal.setObjectName(u"startDepthVal")
         self.startDepthVal.setGeometry(QRect(1050, 125, 61, 21))
         self.startDepthVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.axOverlapVal = QSpinBox(analysisParams)
         self.axOverlapVal.setObjectName(u"axOverlapVal")
         self.axOverlapVal.setGeometry(QRect(670, 265, 51, 31))
         self.axOverlapVal.setStyleSheet(u"QSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.frameLabel = QLabel(analysisParams)
         self.frameLabel.setObjectName(u"frameLabel")
@@ -326,36 +331,42 @@ class Ui_analysisParams(object):
         self.minFreqVal.setGeometry(QRect(670, 440, 61, 21))
         self.minFreqVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.maxFreqVal = QDoubleSpinBox(analysisParams)
         self.maxFreqVal.setObjectName(u"maxFreqVal")
         self.maxFreqVal.setGeometry(QRect(850, 510, 61, 21))
         self.maxFreqVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.samplingFreqVal = QDoubleSpinBox(analysisParams)
         self.samplingFreqVal.setObjectName(u"samplingFreqVal")
         self.samplingFreqVal.setGeometry(QRect(1060, 350, 61, 21))
         self.samplingFreqVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.axWinSizeVal = QDoubleSpinBox(analysisParams)
         self.axWinSizeVal.setObjectName(u"axWinSizeVal")
         self.axWinSizeVal.setGeometry(QRect(670, 130, 61, 21))
         self.axWinSizeVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.latWinSizeVal = QDoubleSpinBox(analysisParams)
         self.latWinSizeVal.setObjectName(u"latWinSizeVal")
         self.latWinSizeVal.setGeometry(QRect(670, 190, 61, 21))
         self.latWinSizeVal.setStyleSheet(u"QDoubleSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
         self.clipFactorVal = QSpinBox(analysisParams)
         self.clipFactorVal.setObjectName(u"clipFactorVal")
         self.clipFactorVal.setGeometry(QRect(1060, 260, 51, 31))
         self.clipFactorVal.setStyleSheet(u"QSpinBox {\n"
 "	background-color: white;\n"
+"	color: black;\n"
 "}")
 
         self.retranslateUi(analysisParams)

@@ -150,9 +150,10 @@ class RfAnalysisGUI(QWidget, Ui_rfAnalysis):
         return True
     
     def plotOnCanvas(self): # Plot current image on GUI
+        self.figure.clear()
         self.ax = self.figure.add_subplot(111)
         im = plt.imread(os.path.join("imROIs", "bModeIm.png"))
-        plt.imshow(im, cmap='Greys_r')
+        self.ax.imshow(im, cmap='Greys_r')
 
         self.ax.plot(self.splineX, self.splineY, color = "cyan", zorder=1, linewidth=0.75)
         self.figure.subplots_adjust(left=0,right=1, bottom=0,top=1, hspace=0.2,wspace=0.2)
@@ -164,10 +165,13 @@ class RfAnalysisGUI(QWidget, Ui_rfAnalysis):
     def updateBModeSettings(self): # Updates background photo when image settings are modified
         self.cvIm = Image.open(os.path.join("imROIs", "bModeImRaw.png"))
         contrast = ImageEnhance.Contrast(self.cvIm)
+        hi = self.editImageDisplayGUI.contrastVal.value()
         imOutput = contrast.enhance(self.editImageDisplayGUI.contrastVal.value())
         brightness = ImageEnhance.Brightness(imOutput)
+        hi = self.editImageDisplayGUI.brightnessVal.value()
         imOutput = brightness.enhance(self.editImageDisplayGUI.brightnessVal.value())
         sharpness = ImageEnhance.Sharpness(imOutput)
+        hi = self.editImageDisplayGUI.sharpnessVal.value()
         imOutput = sharpness.enhance(self.editImageDisplayGUI.sharpnessVal.value())
         imOutput.save(os.path.join("imROIs", "bModeIm.png"))
         self.plotOnCanvas()
