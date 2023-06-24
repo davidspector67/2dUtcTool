@@ -1,7 +1,7 @@
 from UtcAnalysis.roiSelection_ui import *
 from UtcAnalysis.editImageDisplay_ui_helper import *
 from UtcAnalysis.rfAnalysis_ui import *
-from roiFuncs import *
+from Utils.roiFuncs import *
 
 import os
 import numpy as np

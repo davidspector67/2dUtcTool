@@ -122,97 +122,93 @@ def getData(Files, RefFiles, AnalysisParams):
 
     return [ImgInfo, RefInfo, ImgData, RefData]
 
-def readFileInfo(filename, filepath, input):
-    if filename[-4:] == ".mat":        
-        studyID = filename[:-4]
-        studyEXT = filename[-4:]
+def readFileInfo(filename, filepath, input):    
+    studyID = filename[:-4]
+    studyEXT = filename[-4:]
 
-        Info = InfoStruct()
-        Info.studyMode = "RF"
-        Info.filename = filename
-        Info.filepath = filepath
-        Info.probe = "C5-?"
-        Info.system = "EPIQ7"
-        Info.studyID = studyID
-        Info.studyEXT = studyEXT
-        Info.samples = input["pt"][0]
-        Info.lines = np.array(input["rf_data_all_fund"][0][0][0][0]).shape[0]
-        Info.depthOffset = 0.04 # probeStruct.transmitoffset
-        Info.depth = 0.16 #?
-        Info.width = 70 #?
-        Info.rxFrequency = 20000000
-        Info.samplingFrequency = 20000000
-        Info.txFrequency = 3200000
-        Info.centerFrequency = 3200000
-        Info.targetFOV = 0
-        Info.numFocalZones = 1
-        Info.numFrames = input["NumFrame"][0]
-        Info.frameSize = np.nan
-        Info.depthAxis = np.nan
-        Info.widthAxis = np.nan
-        Info.lineDensity = input["multilinefactor"][0]
-        Info.height = 500
-        Info.pitch = 0
-        Info.dynRange = 55
-        Info.yOffset = 0
-        Info.xOffset = 0
-        Info.lowBandFreq = 1000000
-        Info.upBandFreq = 6000000
-        Info.gain = 0
-        Info.rxGain = 0
-        Info.userGain = 0
-        Info.txPower = 0
-        Info.power = 0
-        Info.PRF = 0
+    Info = InfoStruct()
+    Info.studyMode = "RF"
+    Info.filename = filename
+    Info.filepath = filepath
+    Info.probe = "C5-?"
+    Info.system = "EPIQ7"
+    Info.studyID = studyID
+    Info.studyEXT = studyEXT
+    Info.samples = input["pt"][0][0]
+    Info.lines = np.array(input["rf_data_all_fund"][0][0]).shape[0]
+    Info.depthOffset = 0.04 # probeStruct.transmitoffset
+    Info.depth = 0.16 #?
+    Info.width = 70 #?
+    Info.rxFrequency = 20000000
+    Info.samplingFrequency = 20000000
+    Info.txFrequency = 3200000
+    Info.centerFrequency = 3200000
+    Info.targetFOV = 0
+    Info.numFocalZones = 1
+    Info.numFrames = input["NumFrame"][0][0]
+    Info.frameSize = np.nan
+    Info.depthAxis = np.nan
+    Info.widthAxis = np.nan
+    Info.lineDensity = input["multilinefactor"][0][0]
+    Info.height = 500
+    Info.pitch = 0
+    Info.dynRange = 55
+    Info.yOffset = 0
+    Info.xOffset = 0
+    Info.lowBandFreq = 1000000
+    Info.upBandFreq = 6000000
+    Info.gain = 0
+    Info.rxGain = 0
+    Info.userGain = 0
+    Info.txPower = 0
+    Info.power = 0
+    Info.PRF = 0
 
-        # Philips Specific
-        Info.tilt1 = 0
-        Info.width1 = 70
-        Info.startDepth1 = 0.04
-        Info.endDepth1 = 0.16
-        Info.endHeight = 500
-        Info.clip_fact = 0.95
-        Info.numSonoCTAngles = input["NumSonoCTAngles"][0]
-        
-        Info.yResRF = 1
-        Info.xResRF = 1
-        Info.yRes = 1
-        Info.xRes = 1
-        Info.quad2x = 1
+    # Philips Specific
+    Info.tilt1 = 0
+    Info.width1 = 70
+    Info.startDepth1 = 0.04
+    Info.endDepth1 = 0.16
+    Info.endHeight = 500
+    Info.clip_fact = 0.95
+    Info.numSonoCTAngles = input["NumSonoCTAngles"][0][0]
+    
+    Info.yResRF = 1
+    Info.xResRF = 1
+    Info.yRes = 1
+    Info.xRes = 1
+    Info.quad2x = 1
 
-        return Info
+    return Info
 
 def readFileImg(Info, frame, input):
-    if Info.filename[-4:] == '.mat':
-        slice = 1
-        echoData = input["rf_data_all_fund"][0][0][0][frame]
+    echoData = input["rf_data_all_fund"][0][frame]
 
-        transformed = abs(hilbert(echoData[:,0]))
-        bmode = np.zeros(echoData.shape)
+    bmode = np.zeros(echoData.shape)
 
-        # Do Hilbert Transform on each column
-        for i in range(echoData.shape[1]):
-            bmode[:,i] = 20*np.log10(abs(hilbert(echoData[:,i])))
+    # Do Hilbert Transform on each column
+    for i in range(echoData.shape[1]):
+        bmode[:,i] = 20*np.log10(abs(hilbert(echoData[:,i])))
 
-        ModeIM = echoData
+    ModeIM = echoData
 
-        [scBmode, hCm1, wCm1, _] = scanConvert(bmode, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
-        # TODO: Left off here (line 23, philips_read_PhilipsImg.m). Was not able to check final outim, inIm_ind(x/y). If something's off, look here
-        [_, hCm1, wCm1, scModeIM] = scanConvert(ModeIM, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
+    [scBmode, hCm1, wCm1, _] = scanConvert(bmode, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
+    # TODO: Left off here (line 23, philips_read_PhilipsImg.m). Was not able to check final outim, inIm_ind(x/y). If something's off, look here
+    [_, hCm1, wCm1, scModeIM] = scanConvert(ModeIM, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
 
-        Info.height = hCm1
-        Info.width = wCm1
-        Info.lateralRes = wCm1*10/scBmode.shape[1]
-        Info.axialRes = hCm1*10/scBmode.shape[0]
-        Info.maxval = np.amax(scBmode)
+    Info.height = hCm1
+    Info.width = wCm1
+    Info.lateralRes = wCm1*10/scBmode.shape[1]
+    Info.axialRes = hCm1*10/scBmode.shape[0]
+    Info.maxval = np.amax(scBmode)
 
-        Data = DataOutputStruct()
-        Data.scRF = scModeIM
-        Data.scBmode = scBmode
-        Data.rf = ModeIM
-        Data.bMode = bmode
+    Data = DataOutputStruct()
+    Data.scRF = scModeIM
+    Data.scBmode = scBmode
+    Data.rf = ModeIM
+    Data.bMode = bmode
 
-        return Data, Info
+    return Data, Info
 
 
 

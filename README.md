@@ -1,4 +1,5 @@
 # README
+# Some way to compile C code (currently uses gcc) is required
 
 This README would normally document whatever steps are necessary to get your application up and running.
 

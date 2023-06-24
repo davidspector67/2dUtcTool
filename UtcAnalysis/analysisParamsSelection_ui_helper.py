@@ -1,7 +1,7 @@
 from UtcAnalysis.analysisParamsSelection_ui import *
 from UtcAnalysis.rfAnalysis_ui_helper import *
 import os
-from roiFuncs import *
+from Utils.roiFuncs import *
 
 def selectImageHelper(pathInput):
     if not os.path.exists(pathInput.text()): # check if file path is manually typed

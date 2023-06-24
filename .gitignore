@@ -63,3 +63,9 @@ Thumbs.db
 
 # pycache
 __pycache__/
+
+# RF parser files
+philips_rf_parser.o
+philips_rf_parser
+partA_data
+partB_data

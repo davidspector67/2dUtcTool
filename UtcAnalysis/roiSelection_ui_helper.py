@@ -2,7 +2,8 @@ from UtcAnalysis.roiSelection_ui import *
 from UtcAnalysis.editImageDisplay_ui_helper import *
 from UtcAnalysis.analysisParamsSelection_ui_helper import *
 from UtcAnalysis.rfAnalysis_ui_helper import *
-from Parsers.philipsParser import getImage
+from Parsers.philipsMatParser import getImage
+from Parsers.philipsRfParser import main_parser_stanford
 
 import os
 import numpy as np
@@ -101,52 +102,33 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
         phantFileLocation = phantomFilePath[:len(phantomFilePath)-len(phantFileName)]
         if dataFileName[-3:] == ".rf": # Check binary signatures at start of .rf files
             dataFile = open(imageFilePath, 'rb')
-            phantFile = open(phantomFilePath, 'rb')
-            dataSIg = list(dataFile.read(8))
-            phantSIg = list(phantFile.read(8))
-            if dataSIg != [0,0,0,0,255,255,0,0] and phantSIg != [0,0,0,0,255,255,0,0]: # Philips signature parameters
+            datasig = list(dataFile.read(8))
+            if datasig != [0,0,0,0,255,255,0,0]: # Philips signature parameters
                 # self.invalidPath.setText("Data and Phantom files are both invalid.\nPlease use Philips .rf files.")
                 return
-            elif phantSIg != [0,0,0,0,255,255,0,0]:
+            elif datasig != [0,0,0,0,255,255,0,0]:
                 # self.invalidPath.setText("Invalid phantom file.\nPlease use Philips .rf files.")
                 return
-            elif dataSIg != [0, 0, 0, 0, 255, 255, 0, 0]:
-                # self.invalidPath.setText("Invalid data file.\nPlease use Philips .rf files.")
+            else: # Display Philips image and assign relevant default analysis
+                main_parser_stanford(imageFilePath) # parse image filee
+
+                dataFileName = str(dataFileName[:-3]+'.mat')
+
+        if phantFileName[-3:] == ".rf": # Check binary signatures at start of .rf files
+            phantFile = open(phantomFilePath, 'rb')
+            phantsig = list(phantFile.read(8))
+            if phantsig != [0,0,0,0,255,255,0,0]: # Philips signature parameters
+                # self.invalidPath.setText("Data and Phantom files are both invalid.\nPlease use Philips .rf files.")
+                return
+            elif phantsig != [0,0,0,0,255,255,0,0]:
+                # self.invalidPath.setText("Invalid phantom file.\nPlease use Philips .rf files.")
                 return
             else: # Display Philips image and assign relevant default analysis
-                # s = eng.genpath(str(os.getcwd()+'/Machine_Code/Philips'))
-                # eng.addpath(s, nargout=0)
-                # imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = eng.philips_getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame, nargout=5)
-                self.frame = 0
-                imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame)
-                self.arHeight = imArray.shape[0]
-                self.arWidth = imArray.shape[1]
-                self.imData = np.array(imArray).reshape(self.arHeight, self.arWidth)
-                self.imData = np.flipud(self.imData) #flipud
-                self.imData = np.require(self.imData,np.uint8,'C')
-                self.bytesLine = self.imData.strides[0]
-                self.qIm = QImage(self.imData, self.arWidth, self.arHeight, self.bytesLine, QImage.Format_Grayscale8) 
+                main_parser_stanford(imageFilePath) # parse image filee
 
-                self.qIm.mirrored().save(os.path.join("imROIs", "bModeImRaw.png")) # Save as .png file
+                phantFileName = str(phantFileName[:-3]+'.mat')
 
-                self.pixSizeAx = self.imgDataStruct.scBmode.shape[0]
-                self.pixSizeLat = self.imgDataStruct.scBmode.shape[1]
-
-                self.editImageDisplayGUI.contrastVal.setValue(4)
-                self.editImageDisplayGUI.brightnessVal.setValue(0.75)
-                self.editImageDisplayGUI.sharpnessVal.setValue(3)
-
-                self.axialOverlap = 0.5
-                self.lateralOverlap = 0.5
-                self.minFrequency = 3000000
-                self.maxFrequency = 4500000
-                self.axialWinSize = 1#1480/20000000*10000 # must be at least 10 times wavelength
-                self.lateralWinSize = 1#1480/20000000*10000 # must be at least 10 times wavelength
-                self.frame = 1
-                self.samplingFreq = 20000000
-                self.threshold = 95
-
-        elif dataFileName[-4:] == ".mat": # Display Philips image and assign relevant default analysis params
+        if dataFileName[-4:] == ".mat" and phantFileName[-4:] == ".mat": # Display Philips image and assign relevant default analysis params
             self.frame = 0
             imArray, self.imgDataStruct, self.imgInfoStruct, self.refDataStruct, self.refInfoStruct = getImage(dataFileName, dataFileLocation, phantFileName, phantFileLocation, self.frame)
             self.arHeight = imArray.shape[0]
