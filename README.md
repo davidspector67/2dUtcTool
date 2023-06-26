@@ -16,7 +16,7 @@ The program displays this data in the form of a parametric map. The spectral par
 
 ### Individual Window Results
 
-![Individual Window Results Example](images/finalTICImage.png "Individual Window Results Example")
+![Individual Window Results Example](images/indResultsEx.png "Individual Window Results Example")
 
 ## Dependencies
 
