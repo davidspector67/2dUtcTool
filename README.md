@@ -61,7 +61,7 @@ From here, compiler Parser\philips_rf_parser.c into Parser\philips_rf_parser exe
 ### Mac/Linux
 
 ```shell
-call venv\scripts\activate.bat
+source venv/bin/activate
 python main.py
 deactivate
 ```
@@ -69,7 +69,7 @@ deactivate
 ### Windows
 
 ```shell
-source venv/bin/activate
+call venv\scripts\activate.bat
 python main.py
 deactivate
 ```
