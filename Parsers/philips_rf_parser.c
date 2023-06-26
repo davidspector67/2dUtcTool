@@ -118,7 +118,7 @@ void get_partA(long long num_clumps, char* fn, int offset_bytes, int* partA) {
 
     // WARNING: cannot handle files greater than 2GiB for now. May not be the case for Mac, but need O_LARGEFILE for Windows and Linux
 
-    int dest_fd = open("partA_data", O_CREAT | O_RDWR | O_TRUNC, 0777);
+    int dest_fd = open(".partA_data", O_CREAT | O_RDWR | O_TRUNC, 0777);
     if (dest_fd == -1) {
         perror("open");
         exit(errno);
@@ -176,7 +176,7 @@ void get_partB(long long num_clumps, char* fn, int offset_bytes, int* partB) {
         ++x;
     }
 
-    int dest_fd = open("partB_data", O_CREAT | O_RDWR | O_TRUNC, 0777);
+    int dest_fd = open(".partB_data", O_CREAT | O_RDWR | O_TRUNC, 0777);
     if (dest_fd == -1) {
         perror("open");
         exit(errno);

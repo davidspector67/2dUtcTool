@@ -2,7 +2,6 @@ import numpy as np
 import os
 from datetime import datetime
 import warnings
-from bitstring import ConstBitStream
 from scipy.io import savemat
 
 
@@ -677,13 +676,13 @@ def parseRF(filepath, readOffset, readSize):
             readSize = remainingSize
         numClumps = int(np.floor(readSize/32)) # 256 bit clumps
 
-        os.system("./Parsers/philips_rf_parser {0} {1} {2} partA".format(fn, numClumps, (totalHeaderSize+readOffset)))
-        os.system("./Parsers/philips_rf_parser {0} {1} {2} partB".format(fn, numClumps, (totalHeaderSize+readOffset)))
+        os.system("Parsers/philips_rf_parser {0} {1} {2} partA".format(fn, numClumps, (totalHeaderSize+readOffset)))
+        os.system("Parsers/philips_rf_parser {0} {1} {2} partB".format(fn, numClumps, (totalHeaderSize+readOffset)))
 
-        partA = np.fromfile("partA_data", dtype=np.int32)
+        partA = np.fromfile(".partA_data", dtype=np.int32)
         partA = np.reshape(partA, (12, numClumps), order='F')
 
-        partB = np.fromfile("partB_data", dtype=np.int32)
+        partB = np.fromfile(".partB_data", dtype=np.int32)
         partB = np.reshape(partB, (1, numClumps))       
 
         rawrfdata = np.concatenate((partA, partB))

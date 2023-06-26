@@ -182,9 +182,12 @@ def readFileInfo(filename, filepath, input):
     return Info
 
 def readFileImg(Info, frame, input):
-    echoData = input["rf_data_all_fund"][0][frame]
+    echoData = input["rf_data_all_fund"]
+    while not(len(echoData[0].shape) > 1 and (echoData[0].shape[0]>100 and echoData[0].shape[1]>100)):
+        echoData = echoData[0]
+    echoData = np.array(echoData[frame]).astype(np.int32)
 
-    bmode = np.zeros(echoData.shape)
+    bmode = np.zeros(echoData.shape).astype(np.int32)
 
     # Do Hilbert Transform on each column
     for i in range(echoData.shape[1]):

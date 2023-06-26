@@ -1,84 +1,75 @@
-# README
-# Some way to compile C code (currently uses gcc) is required
+# 2D Ultrasound Tissue Characterization Tool
 
-This README would normally document whatever steps are necessary to get your application up and running.
+## Overview
 
-### What is this repository for?
+This program is a 2D radiofrequncy (RF) analysis tool which allows user to input the RF data of an image to analyze as well as a phantom image. From here, a Bmode image is generated, the user can draw a region of interest (ROI) on the image, and then the program calculates the power spectrum within each window of user-defined size within the ROI. The midband fit (MBF), spectral slope (SS), and spectral intercept (SI) spectral parameters are then calculated from each window, and their average within the ROI is displayed.
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+The program displays this data in the form of a parametric map. The spectral parameters of each individual window in the ROI can be viewed by selecting the window of interest as shown below.
 
-### How do I get set up?
+### Draw ROI
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+![ROI Drawing Example](images/drawRoiEx.png "ROI Drawing Example")
 
-### Contribution guidelines
+### Resulting Parametric Map with Average Spectral Parameters
 
-* Writing tests
-* Code review
-* Other guidelines
+![Average Results Example](images/avResultsEx.png "Average Results Example")
 
-### Who do I talk to?
+### Individual Window Results
 
-* Repo owner or admin
-* Other community or team contact
+![Individual Window Results Example](images/finalTICImage.png "Individual Window Results Example")
 
-### Automatic Line Detection
+## Dependencies
 
-The references files for the Canon NAFLD data were taken from a phantom tube. Since we can only perform analysis on the portion of the ultrasound scan that lay within the tube, we needed a way to automatically detect the boundary of the phantom tube.
+* [Python Version 3.9.13](https://www.python.org/downloads/release/python-3913/)
+* [Git](https://git-scm.com/downloads)
+* C Compiler (uses [GCC](https://gcc.gnu.org/) by default on Unix systems)
 
-To do so, we used a Hough transform to detect the linear boundaries in the scan-converted phantom files.
+## Building
 
-##### 1) Generate a PNG of the scan-converted image.
+### Mac/Linux
 
-![](md_images/scan_converted.png)
+```shell
+git clone https://github.com/davidspector67/2dUtcTool.git
+cd 2dUtcTool
+pip install virtualenv
+python -m venv venv
+source venv/bin/activate
+pip install -r pyPackages.txt
+deactivate
+cd Parsers
+gcc -c -Wall -Wpedantic philips_rf_parser.c
+git -o philips_rf_parser philips_rf_parser.o
+cd ..
+```
 
-##### 2) Convolve the scan-converted image (cv2.filter2D).
+### Windows
 
-Initially, we tried to detect the boundary without modifications to the image, but we found that instead of picking up the contrast between the light gray interior of the tube and the dark gray exterior, it actually picked up the contrast between the noise speckles.
+```shell
+git clone https://github.com/davidspector67/2dUtcTool.git
+cd 2dUtcTool
+pip install virtualenv
+python -m venv venv
+call \venv\scripts\activate.bat
+pip install -r pyPackages.txt
+deactivate
+```
 
-![](md_images/speckles.png)
+From here, compiler Parser\philips_rf_parser.c into Parser\philips_rf_parser executable using preferred C compiler.
 
-Blurring the image reduced the noise, enabling the program to detect the boundary.
+## Running
 
-    filtered = cv2.blur(image, (7, 7))
+### Mac/Linux
 
-This worked well for most phantom files. We tried adjusting the blurring kernel size, as well as the threshold values for Canny (see part 3) and Hough (see part 4), but we were unable to find a single set of values that worked for all of the files.
+```shell
+call venv\scripts\activate.bat
+python main.py
+deactivate
+```
 
-Instead, we ended up using a similar concept to blurring: convolution. This allowed us to specify a different filter for each of the three boundary lines. With this, we could blur only along the horizontal or vertical axis, leaving the desired line relatively clean and easy to detect.
+### Windows
 
-    filtered = cv2.filter2D(src=gray_arr, ddepth=-1, kernel=filter)
-
-![](md_images/show_blurred_0.png)
-![](md_images/show_blurred_1.png)
-![](md_images/show_blurred_2.png)
-
-##### 3) Edge detection.
-
-This step simplifies the data into edge (white) or no edge (black).
-
-    cv2.Canny(filtered, thresh1, thresh2)
-
-We initially struggled to find a threshold range that would work well for all of the phantoms. However, using different convolution kernels for each of the three lines to be detected enabled us to also specify different threshold ranges for each boundary. Through trial and error, we found that a threshold range of 35-60 worked best for the bottom and left boundaries, but the right boundary was a bit more difficult to detect, so we lowered the threshold range to 30-50.
-
-![](md_images/show_edges_0.png)
-![](md_images/show_edges_1.png)
-![](md_images/show_edges_2.png)
-
-##### 4) Hough transform line detection.
-
-This function uses the edge data generated in the previous step to identify lines. Again, trial and error revealed that a threshold of 40 worked best. After detecting all of the lines, we isolated the desired lines based on angle and position of the x/y coordinates and selected the line of the highest confidence for each of the three boundary lines.
-
-    cv2.HoughLines(edges, 1, np.pi/180, threshold, min_theta=angle1, max_theta=angle2)
-
-![](md_images/show_result.png)
-
-##### Future Steps
-
-Now that the line detection works well, we need to integrate it into the GUI and use it to exclude windows that lie outside of these boundary lines.
+```shell
+source venv/bin/activate
+python main.py
+deactivate
+```

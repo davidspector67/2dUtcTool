@@ -1,14 +1,6 @@
-import os
 from numpy import matlib
-
-import matlab.engine
-
 import numpy as np
 from PIL import Image, ImageDraw
-
-eng = matlab.engine.start_matlab()
-s = eng.genpath(str(os.getcwd()+'/Machine_Code/Philips'))
-eng.addpath(s,nargout=0)
 
 class RoiPositionsStruct():
     def __init__(self):
