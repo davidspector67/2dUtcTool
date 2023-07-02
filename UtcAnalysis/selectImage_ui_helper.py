@@ -6,7 +6,7 @@ import shutil
 def selectImageHelper(pathInput):
     if not os.path.exists(pathInput.text()): # check if file path is manually typed
         # NOTE: .bin is currently not supported
-        fileName, _ = QFileDialog.getOpenFileName(None, 'Open File', filter = '*.rf *.mat')
+        fileName, _ = QFileDialog.getOpenFileName(None, 'Open File', filter = '*.rf *.mat *.dcm')
         if fileName != '': # If valid file is chosen
             pathInput.setText(fileName)
         else:

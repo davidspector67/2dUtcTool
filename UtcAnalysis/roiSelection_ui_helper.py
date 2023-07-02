@@ -5,6 +5,7 @@ from UtcAnalysis.rfAnalysis_ui_helper import *
 from Parsers.philipsMatParser import getImage
 from Parsers.philipsRfParser import main_parser_stanford
 
+import pydicom
 import os
 import numpy as np
 from PIL import Image, ImageEnhance
@@ -159,6 +160,27 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             self.analysisParamsGUI.clipFactorVal.setValue(95)
             self.analysisParamsGUI.samplingFreqVal.setValue(20)
             self.analysisParamsGUI.frameVal.setValue(self.frame)
+
+        if imageFilePath.endswith(".dcm"):
+            ds = pydicom.dcmread(imageFilePath)
+            imArray = ds.pixel_array
+
+            self.arHeight = imArray.shape[0]
+            self.arWidth = imArray.shape[1]
+            self.imData = np.array(imArray).reshape(self.arHeight, self.arWidth, 3)
+            self.imData = np.flipud(self.imData) #flipud
+            self.imData = np.require(self.imData,np.uint8,'C')
+            self.bytesLine = self.imData.strides[0]
+            self.qIm = QImage(self.imData, self.arWidth, self.arHeight, self.bytesLine, QImage.Format_RGB888) 
+
+            self.qIm.mirrored().save(os.path.join("imROIs", "bModeImRaw.png")) # Save as .png file
+
+            self.pixSizeAx = self.arHeight
+            self.pixSizeLat = self.arWidth
+
+            self.editImageDisplayGUI.contrastVal.setValue(1)
+            self.editImageDisplayGUI.brightnessVal.setValue(1)
+            self.editImageDisplayGUI.sharpnessVal.setValue(1)
 
         else:
             return
