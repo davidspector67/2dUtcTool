@@ -69,8 +69,8 @@ class Rfdata:
         self.headerInfo = HeaderInfoStruct() # Structure containing information from the headers
         self.echoData = None # Array containing echo line data
         self.dbParams = dbParams() # Structure containing dbParameters. Should match feclib::RFCaptureDBInfo
-        self.echoMModeData = None
-        self.miscData = None
+        self.echoMModeData = []
+        self.miscData = []
 
 def pruneData(lineData, lineHeader, ML_Capture):
 
@@ -123,9 +123,9 @@ def SortRF(RFinput, Stride, ML, CRE=1, isVoyager=True):
     # Make into Column Vecor
     MLs = MLs[:]
 
-    out1 = None
-    out2 = None
-    out3 = None
+    out1 = []
+    out2 = []
+    out3 = []
     
     # Preallocate output array, but only for those that will be used
     if CRE == 4:
@@ -199,12 +199,12 @@ def SortRF(RFinput, Stride, ML, CRE=1, isVoyager=True):
         iML = np.where(ML_SortList == MLs[k])[0]
         out0[:depth, k, :] = RFinput[np.arange(iML[0],(depth*Stride), Stride)]
         if CRE == 2:
-            out1[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
-            out2[:depth,k,:] = RFinput[iML[1]:Stride:(depth*Stride),:]
-            out3[:depth,k,:] = RFinput[iML[1]:Stride:(depth*Stride),:]
+            out1[:depth, k, :] = RFinput[np.arange(iML[1], (depth*Stride), Stride), :]
+            out2[:depth,k,:] = RFinput[np.arange(iML[1], (depth*Stride), Stride), :]
+            out3[:depth,k,:] = RFinput[np.arange(iML[1], (depth*Stride), Stride), :]
         elif CRE == 4:
-            out2[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
-            out3[:depth, k, :] = RFinput[iML[1]:Stride:(depth*Stride),:]
+            out2[:depth, k, :] = RFinput[np.arange(iML[2], (depth*Stride), Stride), :]
+            out3[:depth, k, :] = RFinput[np.arange(iML[3], (depth*Stride), Stride), :]
 
     return out0, out1, out2, out3
 
@@ -213,7 +213,7 @@ def SortRF(RFinput, Stride, ML, CRE=1, isVoyager=True):
 def parseDataF(rawrfdata, headerInfo):
 
     # Definitions
-    minNeg = 2**18
+    minNeg = 2**18 # Used to convert integers to 2's complement
 
     # Find header clumps
     # iHeader pts to the index of the header clump
@@ -470,18 +470,18 @@ def parseFileHeader(file_obj, endianness):
     # Handle accordingly to fileVersion
     temp_dbParams = dbParams()
     if fileVersion == 2:
-        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(4)
-        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(4)
-        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(4)
-        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(4)
-        temp_dbParams.elevationMultilineFactor = file_obj.read(4)
-        temp_dbParams.numPiPulses = file_obj.read(4)
-        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11),(14,11))
-        temp_dbParams.fastPiEnabled = file_obj.read(4)
-        temp_dbParams.numZones2d = file_obj.read(4)
-        temp_dbParams.numSubVols = file_obj.read(1)
-        temp_dbParams.numPlanes = file_obj.read(1)
-        temp_dbParams.zigZagEnabled = file_obj.read(1)
+        temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.azimuthMultilineFactorXbrOut = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.azimuthMultilineFactorXbrIn = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numOfSonoCTAngles2dActual = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.elevationMultilineFactor = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numPiPulses = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.num2DCols = np.reshape([int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14*11)], (14, 11), order='F')
+        temp_dbParams.fastPiEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numZones2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
+        temp_dbParams.numSubVols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.numPlanes = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.zigZagEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
     elif fileVersion == 3:
         temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
@@ -505,87 +505,87 @@ def parseFileHeader(file_obj, endianness):
         temp_dbParams.numCfDummies = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(4)]
 
     elif fileVersion == 4:
-        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
+        temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrOut = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrIn = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrInCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
-        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
+        temp_dbParams.numOfSonoCTAngles2dActual = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.elevationMultilineFactor = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.numPiPulses = file_obj.read(3)
-        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14,11))
-        temp_dbParams.fastPiEnabled = file_obj.read(3)
-        temp_dbParams.numZones2d = file_obj.read(3)
-        temp_dbParams.numSubVols = file_obj.read(1)
+        temp_dbParams.numPiPulses = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.num2DCols = np.reshape([int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14*11)],(14,11), order='F')
+        temp_dbParams.fastPiEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numZones2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numSubVols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.Planes = file_obj.read(1)
+        temp_dbParams.Planes = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.zigZagEnabled = file_obj.read(1)
+        temp_dbParams.zigZagEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.linesPerEnsCf = file_obj.read(3)
-        temp_dbParams.ensPerSeqCf = file_obj.read(3)
-        temp_dbParams.numCfCols = file_obj.read(14)
-        temp_dbParams.numCfEntries = file_obj.read(3)
-        temp_dbParams.numCfDummies = file_obj.read(3)
+        temp_dbParams.linesPerEnsCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.ensPerSeqCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfCols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14)]
+        temp_dbParams.numCfEntries = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfDummies = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
     elif fileVersion == 5:
-        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
+        temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrOut = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrIn = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrInCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
-        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
+        temp_dbParams.numOfSonoCTAngles2dActual = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.elevationMultilineFactor = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
-        temp_dbParams.multiLineFactorCf = file_obj.read(3)
+        temp_dbParams.elevationMultilineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.multiLineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
-        temp_dbParams.numPiPulses = file_obj.read(3)
-        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14,11))
-        temp_dbParams.fastPiEnabled = file_obj.read(3)
-        temp_dbParams.numZones2d = file_obj.read(3)
-        temp_dbParams.numSubVols = file_obj.read(1)
+        temp_dbParams.numPiPulses = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.num2DCols = np.reshape([int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14*11)],(14,11), order='F')
+        temp_dbParams.fastPiEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numZones2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numSubVols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.numPlanes = file_obj.read(1)
+        temp_dbParams.numPlanes = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.zigZagEnabled = file_obj.read(1)
+        temp_dbParams.zigZagEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
 
-        temp_dbParams.linesPerEnsCf = file_obj.read(3)
-        temp_dbParams.ensPerSeqCf = file_obj.read(3)
-        temp_dbParams.numCfCols = file_obj.read(14)
-        temp_dbParams.numCfEntries = file_obj.read(3)
-        temp_dbParams.numCfDummies = file_obj.read(3)
+        temp_dbParams.linesPerEnsCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.ensPerSeqCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfCols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14)]
+        temp_dbParams.numCfEntries = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfDummies = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
     elif fileVersion == 6:
-        temp_dbParams.tapPoint = file_obj.read(1)
-        temp_dbParams.acqNumActiveScChannels2d = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrOut = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrIn = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrOutCf = file_obj.read(3)
-        temp_dbParams.azimuthMultilineFactorXbrInCf = file_obj.read(3)
-        temp_dbParams.numOfSonoCTAngles2dActual = file_obj.read(3)
-        temp_dbParams.elevationMultilineFactor = file_obj.read(3)
-        temp_dbParams.elevationMultilineFactorCf = file_obj.read(3)
-        temp_dbParams.multiLineFactorCf = file_obj.read(3)
-        temp_dbParams.numPiPulses = file_obj.read(3)
-        temp_dbParams.num2DCols = np.reshape(file_obj.read(14*11), (14, 11))
-        temp_dbParams.fastPiEnabled = file_obj.read(3)
-        temp_dbParams.numZones2d = file_obj.read(3)
-        temp_dbParams.numSubVols = file_obj.read(1)
-        temp_dbParams.numPlanes = file_obj.read(1)
-        temp_dbParams.zigZagEnabled = file_obj.read(1)
-        temp_dbParams.linesPerEnsCf = file_obj.read(3)
-        temp_dbParams.ensPerSeqCf = file_obj.read(3)
-        temp_dbParams.numCfCols = file_obj.read(14)
-        temp_dbParams.numCfEntries = file_obj.read(3)
-        temp_dbParams.numCfDummies = file_obj.read(3)
+        temp_dbParams.tapPoint = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.acqNumActiveScChannels2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrOut = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrIn = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrOutCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.azimuthMultilineFactorXbrInCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numOfSonoCTAngles2dActual = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.elevationMultilineFactor = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.elevationMultilineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.multiLineFactorCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numPiPulses = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.num2DCols = np.reshape([int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14*11)],(14,11), order='F')
+        temp_dbParams.fastPiEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numZones2d = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numSubVols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.numPlanes = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.zigZagEnabled = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(1)]
+        temp_dbParams.linesPerEnsCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.ensPerSeqCf = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfCols = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(14)]
+        temp_dbParams.numCfEntries = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
+        temp_dbParams.numCfDummies = [int.from_bytes(file_obj.read(4), endianness, signed=False) for i in range(3)]
 
     else:
         numFileHeaderBytes = 0
@@ -600,7 +600,6 @@ def parseRF(filepath, readOffset, readSize):
     rfdata = Rfdata()
     fn = filepath
     print (str ("Opening: " + fn))
-    fileinfo = os.stat(fn)
     file_obj = open(fn, 'rb')
 
     # Voyager or Fusion?
@@ -817,15 +816,15 @@ def parseRF(filepath, readOffset, readSize):
             rfdata.echoData = SortRF(echoData, ML_Capture, ML_Actual, CRE, isVoyager)
 
         elif Tap_Point == 2: # post-XBR Sort
-            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrOut*rfdata.dbParams.elevationMultilineFactor
-            print(str("\t\tEcho_ML:\t"+ML_Actual+"x\n"))
-            CRE = rfdata.dbParams.acqNumActiveScChannels2d
-            print(str("\t\tCRE:\t"+CRE+"\n"))
+            ML_Actual = rfdata.dbParams.azimuthMultilineFactorXbrOut[0]*rfdata.dbParams.elevationMultilineFactor[0]
+            print(str("\t\tEcho_ML:\t"+str(ML_Actual)+"x\n"))
+            CRE = rfdata.dbParams.acqNumActiveScChannels2d[0]
+            print(str("\t\tCRE:\t"+str(CRE)+"\n"))
             rfdata.echoData = SortRF(echoData, ML_Capture, ML_Actual, CRE, isVoyager)
             
         elif Tap_Point == 4: # post-ADC sort
             ML_Actual = 128
-            print("\t\tEcho_ML:\t"+ML_Actual+"x\n")
+            print(str("\t\tEcho_ML:\t"+str(ML_Actual)+"x\n"))
             CRE = 1
             rfdata.echoData = SortRF(echoData, ML_Actual, ML_Actual, CRE, isVoyager)
 
@@ -837,7 +836,7 @@ def parseRF(filepath, readOffset, readSize):
     if np.sum(echoMMode_index) > 0:
         echoMModeData = pruneData(rfdata.lineData[:,echoMMode_index], rfdata.lineHeader[:,echoMMode_index], ML_Capture)
         ML_Actual = 1
-        print(str("\t\tEchoMMode_ML:\t"+ML_Actual+"x\n"))
+        print(str("\t\tEchoMMode_ML:\t"+str(ML_Actual)+"x\n"))
         CRE = 1
         rfdata.echoMModeData = SortRF(echoMModeData, ML_Capture, ML_Actual, CRE, isVoyager)
 
@@ -995,15 +994,15 @@ def main_parser_stanford(filepath, txBeamperFrame=125, NumSonoCTAngles=5, ML_out
     contents['NumSonoCTAngles'] = NumSonoCTAngles
     contents['pt'] = pt
     contents['multilinefactor'] = multilinefactor
-    if rf.echoData[1]:
+    if len(rf.echoData[1]):
         contents['echoData1'] = rf.echoData[1]
-    if rf.echoData[2]:
+    if len(rf.echoData[2]):
         contents['echoData2'] = rf.echoData[2]
-    if rf.echoData[3]:
+    if len(rf.echoData[3]):
         contents['echoData3'] = rf.echoData[3]
-    if rf.echoMModeData:
+    if len(rf.echoMModeData):
         contents['echoMModeData'] = rf.echoMModeData
-    if rf.miscData:
+    if len(rf.miscData):
         contents['miscData'] = rf.miscData
     
     if os.path.exists(destination):
