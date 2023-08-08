@@ -138,7 +138,7 @@ class RoiSelectionGUI(QWidget, Ui_constructRoi):
             self.imData = np.flipud(self.imData) #flipud
             self.imData = np.require(self.imData,np.uint8,'C')
             self.bytesLine = self.imData.strides[0]
-            self.qIm = QImage(self.imData, self.arWidth, self.arHeight, self.bytesLine, QImage.Format_Grayscale8) 
+            self.qIm = QImage(self.imData, self.arWidth, self.arHeight, self.bytesLine, QImage.Format_Grayscale8).scaled(721, 501)
 
             self.qIm.mirrored().save(os.path.join("imROIs", "bModeImRaw.png")) # Save as .png file
 

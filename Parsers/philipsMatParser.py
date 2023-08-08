@@ -1,4 +1,5 @@
 from scipy.io import loadmat
+# from mat73 import loadmat
 from scipy.signal import hilbert
 from scipy.interpolate import RectBivariateSpline
 import numpy as np
@@ -134,8 +135,8 @@ def readFileInfo(filename, filepath, input):
     Info.system = "EPIQ7"
     Info.studyID = studyID
     Info.studyEXT = studyEXT
-    Info.samples = input["pt"][0][0]
-    Info.lines = np.array(input["rf_data_all_fund"][0][0]).shape[0]
+    # Info.samples = input["pt"][0][0]
+    # Info.lines = np.array(input["rf_data_all_fund"]).shape[0]
     Info.depthOffset = 0.04 # probeStruct.transmitoffset
     Info.depth = 0.16 #?
     Info.width = 70 #?
@@ -145,11 +146,11 @@ def readFileInfo(filename, filepath, input):
     Info.centerFrequency = 3200000
     Info.targetFOV = 0
     Info.numFocalZones = 1
-    Info.numFrames = input["NumFrame"][0][0]
+    # Info.numFrames = input["NumFrame"][0][0]
     Info.frameSize = np.nan
     Info.depthAxis = np.nan
     Info.widthAxis = np.nan
-    Info.lineDensity = input["multilinefactor"][0][0]
+    # Info.lineDensity = input["multilinefactor"][0][0]
     Info.height = 500
     Info.pitch = 0
     Info.dynRange = 55
@@ -171,7 +172,7 @@ def readFileInfo(filename, filepath, input):
     Info.endDepth1 = 0.16
     Info.endHeight = 500
     Info.clip_fact = 0.95
-    Info.numSonoCTAngles = input["NumSonoCTAngles"][0][0]
+    # Info.numSonoCTAngles = input["NumSonoCTAngles"][0][0]
     
     Info.yResRF = 1
     Info.xResRF = 1
@@ -182,34 +183,47 @@ def readFileInfo(filename, filepath, input):
     return Info
 
 def readFileImg(Info, frame, input):
-    echoData = input["rf_data_all_fund"]
-    while not(len(echoData[0].shape) > 1 and (echoData[0].shape[0]>100 and echoData[0].shape[1]>100)):
-        echoData = echoData[0]
-    echoData = np.array(echoData[frame]).astype(np.int32)
+    # echoData = input["rf_data_all_fund"][0][0] # indexing works by frame, angle, image
+    # while not(len(echoData[0].shape) > 1 and (echoData[0].shape[0]>100 and echoData[0].shape[1]>100)):
+    #     echoData = echoData[0]
+    # echoData = np.array(echoData).astype(np.int32)
 
-    bmode = np.zeros(echoData.shape).astype(np.int32)
+    # echoData = input["lineData"]
+    # echoData = np.array(echoData).astype(np.int32)
+    # echoData = np.reshape(echoData[:,0,:], (echoData.shape[0], echoData.shape[2]))
+    echoData = np.real(input["IQData"])
+    bmode = np.log10(abs(input["IQData"]))
+    bmode = np.clip(bmode, (0.95*np.amax(bmode)-3), 0.95*np.amax(bmode)).astype(np.float)
+    bmode -= np.amin(bmode)
+    bmode *= (255/np.amax(bmode))
+
+    # bmode = np.zeros(echoData.shape).astype(np.int32)
 
     # Do Hilbert Transform on each column
-    for i in range(echoData.shape[1]):
-        bmode[:,i] = 20*np.log10(abs(hilbert(echoData[:,i])))
+    # for i in range(echoData.shape[1]):
+    #     bmode[:,i] = 20*np.log10(abs(hilbert(echoData[:,i])))
 
     ModeIM = echoData
 
-    [scBmode, hCm1, wCm1, _] = scanConvert(bmode, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
+    # [scBmode, hCm1, wCm1, _] = scanConvert(bmode, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
     # TODO: Left off here (line 23, philips_read_PhilipsImg.m). Was not able to check final outim, inIm_ind(x/y). If something's off, look here
-    [_, hCm1, wCm1, scModeIM] = scanConvert(ModeIM, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
+    # [_, hCm1, wCm1, scModeIM] = scanConvert(ModeIM, Info.width1, Info.tilt1, Info.startDepth1, Info.endDepth1, Info.endHeight)
 
-    Info.height = hCm1
-    Info.width = wCm1
-    Info.lateralRes = wCm1*10/scBmode.shape[1]
-    Info.axialRes = hCm1*10/scBmode.shape[0]
-    Info.maxval = np.amax(scBmode)
+    # Info.height = hCm1
+    # Info.width = wCm1
+    # Info.lateralRes = wCm1*10/scBmode.shape[1]
+    # Info.axialRes = hCm1*10/scBmode.shape[0]
+    # Info.maxval = np.amax(scBmode)
 
     Data = DataOutputStruct()
-    Data.scRF = scModeIM
-    Data.scBmode = scBmode
+    # Data.scRF = scModeIM
+    # Data.scBmode = scBmode
     Data.rf = ModeIM
     Data.bMode = bmode
+    
+    Data.scRF = ModeIM
+    Data.scBmode = bmode
+    Info.maxval = np.amax(bmode)
 
     return Data, Info
 
